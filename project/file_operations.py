@@ -2,13 +2,14 @@
 import os
 import logging
 from typing import List
-
 import numpy as np
 import pandas as pd
 from datetime import datetime
 import xlsxwriter
 import tkinter
 from tkinter import filedialog
+
+
 
 
 class Import:
@@ -122,9 +123,9 @@ class Export:
         dataframe.to_csv(f"{Export.__export_folder}{name}{suffix}.csv", encoding='utf-8', index=False)
 
     @staticmethod
-    def final_df_to_excel(name: str, suffix: str, col_list: list, df: pd.DataFrame, main_col: str,
-                          filter_col: [str or None],
-                          header_cols: list, df_sel_cols: List[str] = None, aggregation: str = 'sum'):
+    def company_trainer_df_to_xlsx(name: str, suffix: str, col_list: list, df: pd.DataFrame, main_col: str,
+                                   filter_col: [str or None],
+                                   header_cols: list, df_sel_cols: List[str] = None, aggregation: str = 'sum'):
         with pd.ExcelWriter(f'{Export.__export_folder}{name}{suffix}.xlsx', engine='xlsxwriter') as ew:
             # add worksheets for the consultancies in scope
             for value in col_list:
@@ -144,6 +145,30 @@ class Export:
                     new_df.loc[-1, 'total_trainings'] = new_df[df_sel_cols[0]].count()
                     new_df.loc[-1, 'total_pay'] = str(new_df['bgn_per_hour'].sum()) + ".лв"
                 new_df.to_excel(ew, sheet_name=value, header=header_cols, index=False)
+
+    @staticmethod
+    def general_reports_to_xlsx(name: str, suffix: str, df_general_list: list, df_raw_list: list, dfs: list,
+                                df_mont: pd.DataFrame, df_full: pd.DataFrame):
+    # def general_reports_to_xlsx(name: str, suffix: str, df_general_list: list, df_raw_list: list,
+    # df_mont: pd.DataFrame, df_full: pd.DataFrame):
+        with pd.ExcelWriter(f'{name}{suffix}.xlsx', engine='xlsxwriter') as ew:
+            # [print(x) for x in dfs]
+            [print(x) for x in dfs]
+            [getattr(x, name) for x in dfs]
+            # for df_name in df_general_list:
+            #     if [x for x in dfs if x.__name__ == df_name]:
+            #         df = [x for x in dfs if x.__name__ == df_name][0]
+            #     df.to_excel(ew, sheet_name=df_name, index=False)
+            #
+            # for df_name in df_raw_list:
+            #     if [x for x in dfs if x.__name__ == df_name]:
+            #         df = [x for x in dfs if x.__name__ == df_name][0]
+            #     df.to_excel(ew, sheet_name=df_name, index=False)
+            #
+            # month_describe = pd.DataFrame(df_mont.describe())
+            # annual_describe = pd.DataFrame(df_full.describe())
+            # month_describe.to_excel(ew, sheet_name='month_describe')
+            # annual_describe.to_excel(ew, sheet_name='annual_describe')
 
 
 class Update:
