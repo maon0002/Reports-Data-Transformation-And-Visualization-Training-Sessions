@@ -1,12 +1,63 @@
+# coding: utf8
+from typing import List
+import datetime as dt
 import pandas as pd
+import logging
+from project.file_operations import Import, Transform, Export
+from project.collection import Collection
+
+logging.basicConfig(filename='info.log', encoding='utf-8',
+                    level=logging.INFO,
+                    format=u'%(asctime)s %(levelname)-8s %(message)s',
+                    datefmt='%d-%m-%Y %H:%M:%S'
+                    )
 
 
 class DataframeTransformation:
+    _date_default_format = "%d-%b-%Y"
+    _datetime_default_format = "%d-%b-%Y %H:%M:%S"
+    _datetime_final_format = "%Y-%m-%d %H:%M:%S"
+    """
+
+    """
+    # create flags dictionary for references
+    _flags_dict = {
+        'flag_number': [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        'flag_note':
+            ['names issue',
+             'work_mail issue',
+             'pvt_mail issue',
+             'missing both pvt_email and work_email',
+             'missing phone number',
+             'phone number issue',
+             'missing short_type',
+             'pvt email equal to work email',
+             'number of the trainings left less than 1'
+             ]}
 
     def __init__(self, name):
         self.name = name
 
-    def nickname(self, df: pd.DataFrame) -> pd.DataFrame:
+    @staticmethod
+    def trim_all_columns(df):
+        """
+        Trim whitespace from ends of each value across all series in dataframe
+        """
+
+        def trim_strings(x): return x.strip() if isinstance(x, str) else x
+
+        return df.applymap(trim_strings)
+
+    @staticmethod
+    def unwanted_chars(df):
+        """
+        Get rid of single quotes and apostrophes
+        """
+        df = df.replace("'|  |`", "", regex=True)
+        return df
+
+    @staticmethod
+    def nickname(df: pd.DataFrame) -> pd.DataFrame:
         """
         The nickname must must have the following pattern:
         2 letters from the first name,
@@ -53,7 +104,8 @@ class DataframeTransformation:
 
         return df
 
-    def company_substraction(self, df: pd.DataFrame) -> pd.DataFrame:
+    @staticmethod
+    def company_subtraction(df: pd.DataFrame) -> pd.DataFrame:
         """
         1.Check if the meeting was held online or in-person and mark in a separate column
         2.Iterate through the 'type' column and extracts only the company name
@@ -66,11 +118,12 @@ class DataframeTransformation:
         df.loc[~df['type'].str.len() < 1, 'company'] = df['type'].str.split("[:|/]").str[0].str.upper().str.strip()
         return df
 
-    def consultancy_per_emp(self, df: pd.DataFrame) -> pd.DataFrame:
+    @staticmethod
+    def training_per_emp(df: pd.DataFrame) -> pd.DataFrame:
         """
         Add three additional columns for:
             concatenation of employee|company,
-            consultancy calculation total by the concat values,
+            training calculation total by the concat values,
             either the employee have one or more than one consultation
         """
         # concatenate nickname+company for later count and check if they are equal nicknames from different companies
@@ -79,70 +132,101 @@ class DataframeTransformation:
         # count the frequency of occurrence for every  value (employee)
         df['total_per_emp'] = df.groupby('concat_emp_company')['concat_emp_company'].transform('count')
 
-        # comment if the employee have one or more than one consultancies
+        # comment if the employee have one or more than one trainings
         df.loc[df['total_per_emp'].astype(int) == 1, 'returns_or_not'] = 'only one session'
 
         df.loc[df['total_per_emp'].astype(int) > 1, 'returns_or_not'] = 'more then one session'
         return df
 
-    def phone_validation(self, df: pd.DataFrame) -> pd.DataFrame:
+    @staticmethod
+    def phone_validation(df: pd.DataFrame) -> pd.DataFrame:
         df.loc[df['phone'].str.len() < 1, 'flags'] += "5,"
         df.loc[df['phone'].str.contains('[^\d\+]', regex=True, na=False), 'flags'] += "6,"
         df.loc[df['phone'].str.len().between(1, 8), 'flags'] += "6,"
         return df
 
-    def trainer(self, df: pd.DataFrame) -> pd.DataFrame:
+    @staticmethod
+    def trainer(df: pd.DataFrame) -> pd.DataFrame:
         """
-        Substract only the non cyrillic names and put them in a separate column
+        Subtract only the non cyrillic names and put them in a separate column
         """
         df.loc[~df['calendar'].isnull(), 'trainer'] = df['calendar'].str.split('|').str[0].str.strip().str.title()
         return df
 
-    def active_contracts(self, df: pd.DataFrame) -> pd.DataFrame:
+    @staticmethod
+    def active_contracts(df: pd.DataFrame) -> pd.DataFrame:
         """
-        Count the consultancies of the company employees based on the consultancy
+        Count the trainings of the company employees based on the training
         date if there's an active contract'
         """
-        # CONCAT the lines for which the consultancy date is between the contract's start and end date
+        # CONCAT the lines for which the training date is between the contract's start and end date
         df.loc[(df['start_time'] >= df['starts']) & (df['start_time'] <= df['ends']), 'concat_count'] = \
             df['company'] + "|" + df['nickname']
 
-        # count the company/employees total consultancies for the company active period
-        df.loc[(df['start_time'] >= df['starts']) & (df['start_time'] <= df['ends']), 'active_cons_per_client'] = \
+        # count the company/employees total trainings for the company active period
+        df.loc[(df['start_time'] >= df['starts']) & (df['start_time'] <= df['ends']), 'active_trainings_per_client'] = \
             df.groupby('concat_count')['concat_count'].transform('count')
 
-        # calculate the number of consultancies that can be used
+        # calculate the number of trainings that can be used
         df.loc[(df['start_time'] >= df['starts']) &
                (df['start_time'] <= df['ends']) &
-               (df['c_per_emp'].between(1, 9998)), 'cons_left'] = \
-            df['c_per_emp'] - df['active_cons_per_client']
+               (df['c_per_emp'].between(1, 9998)), 'trainings_left'] = \
+            df['c_per_emp'] - df['active_trainings_per_client']
 
-        # add flag for employees which have less than 1 consultancy left
-        df.loc[(~df['cons_left'].isna()) & (df['cons_left'] < 2), 'flags'] += '9,'
+        # add flag for employees which have less than 1 training left
+        df.loc[(~df['trainings_left'].isna()) & (df['trainings_left'] < 2), 'flags'] += '9,'
         return df
 
-    def datetime_normalize(self, df: pd.DataFrame) -> pd.DataFrame:
-        df = df.apply(lambda x: x.strftime("%d-%b-%Y %H:%M:%S"))
+    @staticmethod
+    def datetime_normalize(df: pd.DataFrame) -> pd.DataFrame:
+        df = df.apply(lambda x: x.strftime(DataframeTransformation._datetime_default_format))
         return df
 
-    def date_normalize(self, df: pd.DataFrame) -> pd.DataFrame:
+    @staticmethod
+    def date_normalize(df: pd.DataFrame) -> pd.DataFrame:
         df = pd.to_datetime(df).dt.date
-        df = df.apply(lambda x: x.strftime("%d-%b-%Y"))
+        df = df.apply(lambda x: x.strftime(DataframeTransformation._date_default_format))
         return df
 
-    def dates_diff(self, ser1: pd.Series, ser2: pd.Series) -> pd.Series:
+    @staticmethod
+    def dates_diff(ser1: pd.Series, ser2: pd.Series) -> pd.Series:
         diff = ser2 - ser1
         return diff
 
-    def total_consultations_func(self, df: pd.DataFrame) -> pd.DataFrame:
+    @staticmethod
+    def total_trainings_func(df_mont: pd.DataFrame, df_full: pd.DataFrame) -> pd.DataFrame:
+        # get and transform the trainings data on a total level
+        trainings_column_list_init = Collection.trainings_columns()[0]
+        df = df_mont[trainings_column_list_init]
+
+        # add column for the number of trainings left based on the company contract and used trainings by the employee
+        df = pd.merge(df, df_full[['concat_emp_company', 'training_datetime', 'trainings_left']],
+                      on=['concat_emp_company', 'training_datetime'], how='inner')
+
+        # insert two additional columns with default values
         df.insert(10, "language", 'Български', allow_duplicates=False)
         df.insert(10, "status", 'Проведен', allow_duplicates=False)
+        trainings_column_list_final = Collection.trainings_columns()[1]
+        df = df[trainings_column_list_final]
         return df
 
-    def data_transformation(self, df: pd.DataFrame, df_limit) -> pd.DataFrame:
+    @staticmethod
+    def limitations_func(limitations_df: pd.DataFrame):
+        # calculate contract days
+        limitations_df['contract_duration'] = DataframeTransformation.dates_diff(limitations_df['starts'],
+                                                                                 limitations_df['ends'])
+        # normalize date and datetime
+        limitations_df['ends'] = DataframeTransformation.date_normalize(limitations_df['ends'])
+        limitations_df['starts'] = DataframeTransformation.datetime_normalize(limitations_df['starts'])
+        limitations_df['starts'] = pd.to_datetime(limitations_df['starts'], format='%d-%b-%Y %H:%M:%S')
+        return limitations_df
+
+    def main(self, df: pd.DataFrame, limitations_df: pd.DataFrame) -> List[pd.DataFrame]:
         """
         Transform the monthly and the annual df columns
         """
+        flags_data = pd.DataFrame(Collection.flags_dict())
+        limitations = self.limitations_func(limitations_df)
         df = df.rename(columns={
             'Start Time': 'start_time', 'End Time': 'end_time', 'Date Scheduled': 'scheduled_on',
             'First Name': 'f_name',
@@ -158,9 +242,9 @@ class DataframeTransformation:
             'Notes': 'notes',
             'Label': 'label',
             'Scheduled By': 'scheduled_by',
-            'Name of the company you work for | Име на фирмата, в която работите': 'company_name',
-            'Work email | Служебен имейл': 'work_email',
-            'Preferred platforms | Предпочитани платформи': 'preferred_platforms',
+            'Име на компанията, в която работите | Name of the company you work for  ': 'company_name',
+            'Служебен имейл | Work email  ': 'work_email',
+            'Предпочитани платформи | Preferred platforms  ': 'preferred_platforms',
             'Appointment ID': 'appointment_id'
         })
 
@@ -169,29 +253,29 @@ class DataframeTransformation:
         df['emp_names_input'] = '|' + df['f_name'] + '|' + df['l_name'] + '|'
 
         # rough cleaning of the columns data
-        df = unwanted_chars(df)
-        df = trim_all_columns(df)
+        df = self.unwanted_chars(df)
+        df = self.trim_all_columns(df)
 
         # transliteration of cyrillic to latin chars
-        df["first_name"] = transliteration(df, "f_name", "first_name")
-        df["last_name"] = transliteration(df, "l_name", "last_name")
+        df["first_name"] = Collection.transliterate_bg_to_en(df, "f_name", "first_name")
+        df["last_name"] = Collection.transliterate_bg_to_en(df, "l_name", "last_name")
 
         # using first, last name and email parts
-        df = nickname(df)
+        df = self.nickname(df)
 
-        # get only the company name and if the consultancy was IN PERSON/LIVE or ONLINE
-        df = company_substraction(df)
+        # get only the company name and if the training was IN PERSON/LIVE or ONLINE
+        df = self.company_subtraction(df)
 
         # merge/vlookup the columns from limitations to the monthly/annual df
         df = pd.merge(
             left=df,
-            right=df_limit,
+            right=limitations,
             left_on='company',
             right_on='company',
             how='left')
 
         # add columns for counting unique emp|company values w/ totals
-        df = self.consultancy_per_emp(df)
+        df = self.training_per_emp(df)
 
         # check phone values
         df = self.phone_validation(df)
@@ -199,7 +283,7 @@ class DataframeTransformation:
         # substring trainers from calendar via regex.
         df = self.trainer(df)
 
-        # check if the consultancy date is between the dates when company contract starts and ends
+        # check if the training date is between the dates when company contract starts and ends
         df = self.active_contracts(df)
 
         # create a Month name column
@@ -208,17 +292,54 @@ class DataframeTransformation:
         # create a Year name column
         df["year"] = [pd.Timestamp(x).year for x in df["start_time"]]
 
-        # add column with the name of the day when consultancy was take place
+        # add column with the name of the day when training was take place
         df['dayname'] = df['start_time'].dt.day_name()
 
         # reformat start_time
-        df['cons_datetime'] = datetime_normalize(df['start_time'])
+        df['training_datetime'] = self.datetime_normalize(df['start_time'])
 
         # change from datetime to date only
-        df['scheduled_date'] = date_normalize(df['scheduled_on'])
-        df['cons_end'] = date_normalize(df['end_time'])
+        df['scheduled_date'] = self.date_normalize(df['scheduled_on'])
+        df['training_end'] = self.date_normalize(df['end_time'])
 
-        return df
+        # define/make the raw reports and extract them to .csv
+        full_raw_report_df = df
+        monthly_raw_report_df = Transform.annual_to_monthly_report_df(full_raw_report_df,
+                                                                      DataframeTransformation._datetime_final_format)
+
+        # separate and select only needed columns for new pd sets
+        columns_list = Collection.new_data_columns()
+
+        new_full_data_df = full_raw_report_df[columns_list]
+        new_monthly_data_df = monthly_raw_report_df[columns_list]
+
+        total_trainings_df = self.total_trainings_func(new_monthly_data_df, new_full_data_df)
+
+        # export the dfs to .csv/.xlsx
+
+        Export.df_to_csv(full_raw_report_df, self.name, "_full_raw_report")
+        Export.df_to_csv(monthly_raw_report_df, self.name, "_monthly_raw_report")
+
+        Export.final_df_to_excel(self.name, "_COMPANIES",
+                                 Collection.company_report_list(new_monthly_data_df),
+                                 new_monthly_data_df,
+                                 'company', 'nickname', ['Employee ID', 'Bookings', 'Total'])
+        Export.final_df_to_excel(self.name, "_COMPANIES_OTHER",
+                                 Collection.company_report_list_other(new_monthly_data_df),
+                                 new_monthly_data_df,
+                                 'company', 'nickname', ['Employee ID', 'Bookings', 'Total'])
+        Export.final_df_to_excel(self.name, "_TRAINERS",
+                                 Collection.trainers_report_list(new_monthly_data_df),
+                                 new_monthly_data_df,
+                                 'trainer', None,
+                                 ['Компания', 'Време на тренинга', 'Имена на служител', 'Вид', 'Лв на час',
+                                  'Общо тренинги', 'Общо възнаграждение'],
+                                 ['company', 'training_datetime', 'employee_names', 'short_type', 'bgn_per_hour'],
+                                 "count")
+        return [full_raw_report_df, monthly_raw_report_df]
 
 
-psy = DataframeTransformation("Psychea")
+firm = DataframeTransformation("ServiceCompanyEOOD")
+DataframeTransformation.main(firm,
+                             Import.import_report('imports/schedule2023-04-18.csv'),
+                             Import.import_limitations('imports/limitations.csv'))

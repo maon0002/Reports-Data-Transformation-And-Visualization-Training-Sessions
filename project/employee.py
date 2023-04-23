@@ -1,7 +1,5 @@
 from typing import List
-
-
-
+from project.trainer import Trainer
 
 
 class Employee:

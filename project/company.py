@@ -1,3 +1,7 @@
+from typing import List
+from project.employee import Employee
+
+
 class Company:
     _limitation = 9999
 

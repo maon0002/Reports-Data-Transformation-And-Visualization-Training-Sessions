@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 # import xlsxwriter
 # import datetime as dt
 
@@ -191,7 +191,7 @@ def consultancy_per_emp(df):
     '''
     Add three additional columns for:
         concatenation of employee|company,
-        consultancy calculation total by the concat values,
+        training calculation total by the concat values,
         either the employee have one or more than one consultation
     '''
     # concatenate nickname+company for later count and check if they are equal nicknames from different companies
@@ -219,11 +219,11 @@ def phone_validation(df):
     return df
 
 
-def psychotherapists(df):
+def trainers(df):
     '''
     Substract only the non cyrillic names and put them in a separate column
     '''
-    df.loc[~df['calendar'].isnull(), 'psychotherapist'] = df['calendar'].str.split(
+    df.loc[~df['calendar'].isnull(), 'trainer'] = df['calendar'].str.split(
         '|').str[0].str.strip().str.title()
     return df
 
@@ -233,23 +233,23 @@ def active_contracts(df):
     Count the consultancies of the company employees based on the consultancy
     date if there's an active contract'
     '''
-    # CONCAT the lines for which the consultancy date is between the contract's start and end date
+    # CONCAT the lines for which the training date is between the contract's start and end date
     df.loc[(df['start_time'] >= df['starts']) & (df['start_time'] <=
                                                  df['ends']), 'concat_count'] = df['company'] + "|" + df['nickname']
 
     # count the company/employees total consultancies for the company active period
     df.loc[(df['start_time'] >= df['starts']) & (df['start_time'] <=
-                                                 df['ends']), 'active_cons_per_client'] = df.groupby('concat_count')[
+                                                 df['ends']), 'active_training_per_client'] = df.groupby('concat_count')[
         'concat_count'].transform('count')
     # calculate the number of consultancies that can be used
     df.loc[(df['start_time'] >= df['starts']) & (df['start_time'] <=
-                                                 df['ends']) & (df['c_per_emp'].between(1, 9998)), 'cons_left'] = df[
+                                                 df['ends']) & (df['c_per_emp'].between(1, 9998)), 'training_left'] = df[
         'c_per_emp'] - \
         df[
-        'active_cons_per_client']
+        'active_training_per_client']
 
-    # add flag for employees which have less than 1 consultancy left
-    df.loc[(~df['cons_left'].isna()) & (df['cons_left'] < 2), 'flags'] += '9,'
+    # add flag for employees which have less than 1 training left
+    df.loc[(~df['training_left'].isna()) & (df['training_left'] < 2), 'flags'] += '9,'
     return df
 
 
@@ -269,7 +269,7 @@ def dates_diff(ser1, ser2):
     return diff
 
 
-def total_consultations_func(df):
+def total_trainings_func(df):
     df.insert(10, "language", 'Български', allow_duplicates=False)
     df.insert(10, "status", 'Проведен', allow_duplicates=False)
     return df
@@ -316,7 +316,7 @@ def data_transformation(df, df_limit):
     # using first, last name and email parts
     df = nickname(df)
 
-    # get only the company name and if the consultancy was IN PERSON/LIVE or ONLINE
+    # get only the company name and if the training was IN PERSON/LIVE or ONLINE
     df = company_substraction(df)
 
     # merge/vlookup the columns from limitations to the monthly/annual df
@@ -333,10 +333,10 @@ def data_transformation(df, df_limit):
     # check phone values
     df = phone_validation(df)
 
-    # substring psychotherapists from calendar via regex.
-    df = psychotherapists(df)
+    # substring trainers from calendar via regex.
+    df = trainers(df)
 
-    # check if the consultancy date is between the dates when company contract starts and ends
+    # check if the training date is between the dates when company contract starts and ends
     df = active_contracts(df)
 
     # create a Month name column
@@ -347,16 +347,16 @@ def data_transformation(df, df_limit):
     df["year"] = [pd.Timestamp(x).year
                   for x in df["start_time"]]
 
-    # add column with the name of the day when consultancy was take place
+    # add column with the name of the day when training was take place
     df['dayname'] = df['start_time'].dt.day_name()
 
     # reformat start_time
-    df['cons_datetime'] = datetime_normalize(
+    df['training_datetime'] = datetime_normalize(
         df['start_time'])
 
     # change from datetime to date only
     df['scheduled_date'] = date_normalize(df['scheduled_on'])
-    df['cons_end'] = date_normalize(df['end_time'])
+    df['training_end'] = date_normalize(df['end_time'])
 
     return df
 
@@ -393,7 +393,7 @@ last_row_value = (annual_data['Start Time'].tail(1).dt.to_period('M'))
 monthly_data = annual_data.loc[annual_data['Start Time'].dt.to_period('M').isin(last_row_value)].reset_index(drop=True)
 
 
-# create flags dictionary for refference
+# create flags dictionary for references
 flags_dict = {
     'flag_number': [1, 2, 3, 4, 5, 6, 7, 8, 9],
     'flag_note':
@@ -405,7 +405,7 @@ flags_dict = {
          'phone number issue',
          'missing short_type',
          'pvt email equal to work email',
-         'number of the consultancy left less than 1'
+         'number of the training left less than 1'
          ]
 }
 
@@ -428,8 +428,7 @@ monthly_data = data_transformation(monthly_data, limitations)
 annual_data = data_transformation(annual_data, limitations)
 
 # calculate contract days
-limitations['contract_duration'] = dates_diff(
-    limitations['starts'], limitations['ends'])
+limitations['contract_duration'] = dates_diff(limitations['starts'], limitations['ends'])
 
 # normalize date and datetime
 limitations['ends'] = date_normalize(limitations['ends'])
@@ -439,46 +438,20 @@ limitations['starts'] = datetime_normalize(limitations['starts'])
 # separate and select only needed columns for new pd sets
 # '''
 
-new_monthly_data = monthly_data[[
-    'cons_datetime',
+new_monthly_data_df = monthly_data[[
+    'training_datetime',
     'dayname',
     'month',
     'year',
     'nickname',
     'employee_names',
     'company',
-    'psychotherapist',
+    'trainer',
     'short_type',
     'bgn_per_hour',
     'concat_emp_company',
     'total_per_emp',
-    'cons_left',
-    'returns_or_not',
-    'flags',
-    'phone',
-    'pvt_email',
-    'work_email',
-    'scheduled_date',
-    'type',
-    'emp_names_input',
-    'is_valid'
-
-]]
-
-new_annual_data = annual_data[[
-    'cons_datetime',
-    'dayname',
-    'month',
-    'year',
-    'nickname',
-    'employee_names',
-    'company',
-    'psychotherapist',
-    'short_type',
-    'bgn_per_hour',
-    'concat_emp_company',
-    'total_per_emp',
-    'cons_left',
+    'training_left',
     'returns_or_not',
     'flags',
     'phone',
@@ -490,47 +463,74 @@ new_annual_data = annual_data[[
     'is_valid'
 ]]
 
+new_full_data_df = annual_data[[
+    'training_datetime',
+    'dayname',
+    'month',
+    'year',
+    'nickname',
+    'employee_names',
+    'company',
+    'trainer',
+    'short_type',
+    'bgn_per_hour',
+    'concat_emp_company',
+    'total_per_emp',
+    'training_left',
+    'returns_or_not',
+    'flags',
+    'phone',
+    'pvt_email',
+    'work_email',
+    'scheduled_date',
+    'type',
+    'emp_names_input',
+    'is_valid'
+]]
 
-total_consultations = new_monthly_data[[
+
+total_trainings_df = new_monthly_data_df[[
     'concat_emp_company',
     'type',
     'company',
     'nickname',
-    'cons_datetime',
+    'training_datetime',
     'employee_names',
     'work_email',
-    'psychotherapist',
+    'trainer',
     'short_type'
 ]]
 
-# add column for the number of consultancy left based on the company contract and used cons by the employee
-total_consultations = pd.merge(total_consultations,
-                               new_annual_data[['concat_emp_company', 'cons_datetime', 'cons_left']], on=[
-                                   'concat_emp_company', 'cons_datetime'], how='inner')
+# add column for the number of trainings left based on the company contract and used trainings by the employee
+total_trainings_df = pd.merge(total_trainings_df,
+                              new_full_data_df[['concat_emp_company', 'training_datetime', 'trainings_left']], on=[
+                                   'concat_emp_company', 'training_datetime'], how='inner')
 
-total_consultations = total_consultations_func(total_consultations)
+total_trainings_df = total_trainings_func(total_trainings_df)
 
-total_consultations = total_consultations[[
+total_trainings_df = total_trainings_df[[
     'concat_emp_company',
     'type',
     'company',
     'nickname',
-    'cons_datetime',
+    'training_datetime',
     'employee_names',
     'work_email',
-    'psychotherapist',
-    'cons_left',
+    'trainer',
+    'trainings_left',
     'short_type',
     'status',
     'language'
 ]]
 
-report_trainers = total_consultations[[
+
+
+report_trainers = total_trainings_df[[
     'type',
     'trainer',
     'company',
     'employee_names',
-    'cons_datetime',
+    'training_datetime',
     'short_type',
     'status'
 ]]
@@ -543,20 +543,23 @@ limitations['starts'] = pd.to_datetime(
 # create lists with dfs for later use in to_xlsx sheets
 # '''
 
+
+
+
 raw_report_list = ['new_monthly_data',
                    'new_annual_data', 'limitations', 'flags_data']
-general_report_list = ['total_consultations', 'report_trainers']
+general_report_list = ['total_trainings', 'report_trainers']
 
 # list the companies with is_valid == 1
-company_report_list = [comp for comp in new_monthly_data[(
-    new_monthly_data['is_valid'] == 1)]['company'].unique()]
+company_report_list = [comp for comp in new_monthly_data_df[(
+        new_monthly_data_df['is_valid'] == 1)]['company'].unique()]
 
 
 # list the companies with is_valid == 0
-company_report_list_other = [comp_other for comp_other in new_monthly_data[(
-    new_monthly_data['is_valid'] == 0)]['company'].unique()]
+company_report_list_other = [comp_other for comp_other in new_monthly_data_df[(
+        new_monthly_data_df['is_valid'] == 0)]['company'].unique()]
 
-# list the psychotherapists names
+# list the trainers names
 trainers_report_list = [psy for psy in monthly_data['trainer'].unique()]
 
 
@@ -565,20 +568,16 @@ with pd.ExcelWriter(
         'HourSpacePSY_COMPANIES.xlsx', engine='xlsxwriter') as ew:
     # add worksheets for the consultancies in scope
     for company_name in company_report_list:
-        company_filter = (new_monthly_data['company'] == company_name)
-        new_df = new_monthly_data.loc[company_filter, 'nickname'].value_counts().reset_index(
-            name='count')
+        company_filter = (new_monthly_data_df['company'] == company_name)
+        new_df = new_monthly_data_df.loc[company_filter, 'nickname'].value_counts().reset_index(name='count')
         new_df.loc[-1, 'total'] = new_df['count'].sum()
         company_df = new_df
-        company_df.to_excel(ew, sheet_name=company_name, header=['Employee ID', 'Bookings', 'Total'],
-                            index=False
-                            )
+        company_df.to_excel(ew, sheet_name=company_name, header=['Employee ID', 'Bookings', 'Total'], index=False)
 
     # add worksheets for the consultancies out of scope
     for company_name in company_report_list_other:
-        company_filter = (new_monthly_data['company'] == company_name)
-        new_df = new_monthly_data.loc[company_filter, 'nickname'].value_counts().reset_index(
-            name='count')
+        company_filter = (new_monthly_data_df['company'] == company_name)
+        new_df = new_monthly_data_df.loc[company_filter, 'nickname'].value_counts().reset_index(name='count')
         new_df.loc[-1, 'total'] = new_df['count'].sum()
         company_df = new_df
         company_df.to_excel(ew, sheet_name=company_name, header=['Employee ID', 'Bookings', 'Total'],
@@ -590,10 +589,10 @@ with pd.ExcelWriter(
 with pd.ExcelWriter(
         'HourSpacePSY_THERAPISTS.xlsx', engine='xlsxwriter') as ew:
     for trainer in trainers_report_list:
-        new_df = new_monthly_data[(new_monthly_data['trainer'] == trainer)][
-            ['company', 'cons_datetime', 'employee_names', 'short_type', 'bgn_per_hour']]
+        new_df = new_monthly_data_df[(new_monthly_data_df['trainer'] == trainer)][
+            ['company', 'training_datetime', 'employee_names', 'short_type', 'bgn_per_hour']]
         # add two columns for totals
-        new_df.loc[-1, 'total_consultancies'] = new_df['cons_datetime'].count()
+        new_df.loc[-1, 'total_consultancies'] = new_df['training_datetime'].count()
         new_df.loc[-1, 'total_pay'] = str(new_df['bgn_per_hour'].sum()) + ".лв"
 
         company_df = new_df
@@ -616,8 +615,8 @@ with pd.ExcelWriter(
         df = locals()[df_name]
         df.to_excel(ew, sheet_name=df_name, index=False)
 
-    month_describe = pd.DataFrame(new_monthly_data.describe())
-    annual_describe = pd.DataFrame(new_annual_data.describe())
+    month_describe = pd.DataFrame(new_monthly_data_df.describe())
+    annual_describe = pd.DataFrame(new_full_data_df.describe())
     month_describe.to_excel(ew, sheet_name='month_describe')
     annual_describe.to_excel(ew, sheet_name='annual_describe')
 
@@ -627,9 +626,9 @@ with pd.ExcelWriter(
 with pd.ExcelWriter('HourSpacePSY_REPORTS_STATS_MONTH.xlsx', engine='xlsxwriter') as ew:
 
     # add sheet for statistical monthly data by Employee
-    filter_for_actual_contracts = (new_monthly_data['is_valid'] == 1)
+    filter_for_actual_contracts = (new_monthly_data_df['is_valid'] == 1)
 
-    month_stats_emp = new_monthly_data[['nickname', 'company']]\
+    month_stats_emp = new_monthly_data_df[['nickname', 'company']]\
         .value_counts()\
         .reset_index(name='Consultations per Employee')\
         .sort_values(by='nickname')
@@ -640,7 +639,7 @@ with pd.ExcelWriter('HourSpacePSY_REPORTS_STATS_MONTH.xlsx', engine='xlsxwriter'
                              freeze_panes=(1, 4))
 
     # add sheet for statistical monthly data by Company
-    month_stats_comp = new_monthly_data[['company', 'nickname', 'concat_emp_company']]
+    month_stats_comp = new_monthly_data_df[['company', 'nickname', 'concat_emp_company']]
 
     month_stats_comp_pivot = pd.pivot_table(month_stats_comp,
                                             index=['company', 'nickname'],
@@ -660,7 +659,7 @@ with pd.ExcelWriter('HourSpacePSY_REPORTS_STATS_MONTH.xlsx', engine='xlsxwriter'
                                     )
 
     # add sheet for statistical monthly data by Therapist
-    month_stats_ther = new_monthly_data[['trainer', 'nickname', 'concat_emp_company']]
+    month_stats_ther = new_monthly_data_df[['trainer', 'nickname', 'concat_emp_company']]
 
     month_stats_ther = pd.pivot_table(month_stats_ther,
                                       index=['trainer', 'nickname'],
@@ -680,7 +679,7 @@ with pd.ExcelWriter('HourSpacePSY_REPORTS_STATS_MONTH.xlsx', engine='xlsxwriter'
                               )
 
     # add sheet for statistical monthly data for Copmany's total
-    month_stats_comp_total = new_monthly_data[['company', 'concat_emp_company', 'bgn_per_hour']]
+    month_stats_comp_total = new_monthly_data_df[['company', 'concat_emp_company', 'bgn_per_hour']]
 
     month_stats_comp_total = pd.pivot_table(month_stats_comp_total,
                                             index=['company'],
@@ -701,7 +700,7 @@ with pd.ExcelWriter('HourSpacePSY_REPORTS_STATS_MONTH.xlsx', engine='xlsxwriter'
 
     # add sheet for statistical monthly data for Therapist's total
 
-    month_stats_ther_total = new_monthly_data[['psychotherapist', 'bgn_per_hour', 'is_valid']]
+    month_stats_ther_total = new_monthly_data_df[['trainer', 'bgn_per_hour', 'is_valid']]
 
     month_stats_ther_total = pd.pivot_table(month_stats_ther_total,
                                             index=['trainer'],
@@ -726,10 +725,10 @@ with pd.ExcelWriter('HourSpacePSY_REPORTS_STATS_MONTH.xlsx', engine='xlsxwriter'
 with pd.ExcelWriter('HourSpacePSY_REPORTS_STATS_ANNUAL.xlsx', engine='xlsxwriter') as ew:
 
     # add sheet for statistical annual data by Company with percentage
-    filter_for_actual_contracts_y = (new_annual_data['is_valid'] == 1)
+    filter_for_actual_contracts_y = (new_full_data_df['is_valid'] == 1)
 
-    annual_stats_general1 = new_annual_data[['company']].value_counts().reset_index()  # .value_counts(normalize=True)*100
-    annual_stats_general2 = (new_annual_data[['company']].value_counts(normalize=True).mul(100).round(2).astype(str) + '%').reset_index()
+    annual_stats_general1 = new_full_data_df[['company']].value_counts().reset_index()  # .value_counts(normalize=True)*100
+    annual_stats_general2 = (new_full_data_df[['company']].value_counts(normalize=True).mul(100).round(2).astype(str) + '%').reset_index()
 
     annual_stats_general = pd.merge(
         left=annual_stats_general1,
@@ -744,7 +743,7 @@ with pd.ExcelWriter('HourSpacePSY_REPORTS_STATS_ANNUAL.xlsx', engine='xlsxwriter
                                   freeze_panes=(1, 3)
                                   )
     # add sheet for statistical annual data by Company and Year
-    annual_stats_by_year = new_annual_data[['company', 'year']]
+    annual_stats_by_year = new_full_data_df[['company', 'year']]
 
     # annual_stats_by_year = pd.pivot_table(annual_stats_by_year,
     #                                       index=['company'],
@@ -770,7 +769,7 @@ with pd.ExcelWriter('HourSpacePSY_REPORTS_STATS_ANNUAL.xlsx', engine='xlsxwriter
                                   )
 
     # add sheet for statistical annual data by Unique EmployeeIDs with percentage
-    annual_stats_unique_emp0 = new_annual_data[['company', 'nickname']].value_counts().to_frame().reset_index()
+    annual_stats_unique_emp0 = new_full_data_df[['company', 'nickname']].value_counts().to_frame().reset_index()
 
     annual_stats_unique_emp1 = annual_stats_unique_emp0[['company']].value_counts().to_frame().reset_index()
     annual_stats_unique_emp2 = (annual_stats_unique_emp0[['company']].value_counts(normalize=True).mul(100).round(2).astype(str) + '%').reset_index()
@@ -789,7 +788,7 @@ with pd.ExcelWriter('HourSpacePSY_REPORTS_STATS_ANNUAL.xlsx', engine='xlsxwriter
                                      )
 
     # add sheet for statistical annual data by Employee, by Year
-    annual_stats_by_emp_by_year = new_annual_data[['company', 'nickname', 'year']]
+    annual_stats_by_emp_by_year = new_full_data_df[['company', 'nickname', 'year']]
 
     annual_stats_by_emp_by_year = annual_stats_by_emp_by_year.value_counts(['company', 'nickname', 'year']).unstack()  # .fillna(0)
     annual_stats_by_emp_by_year['Total'] = annual_stats_by_emp_by_year.agg("sum", axis='columns')
@@ -803,7 +802,7 @@ with pd.ExcelWriter('HourSpacePSY_REPORTS_STATS_ANNUAL.xlsx', engine='xlsxwriter
                                          freeze_panes=(1, 7)
                                          )
     # add sheet for statistical annual data by Company and Employees with only 1 consultation
-    annual_stats_by_emp_with_one_cons = new_annual_data[(new_annual_data['returns_or_not'] == 'only one session')].reset_index()
+    annual_stats_by_emp_with_one_cons = new_full_data_df[(new_full_data_df['returns_or_not'] == 'only one session')].reset_index()
     annual_stats_by_emp_with_one_cons = annual_stats_by_emp_with_one_cons[['company', 'nickname']].value_counts().to_frame()
 
     annual_stats_by_emp_with_one_cons.loc[-1, 'Grand Total'] = annual_stats_by_emp_with_one_cons[0].sum()
