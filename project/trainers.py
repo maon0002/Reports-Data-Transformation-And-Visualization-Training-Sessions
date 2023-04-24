@@ -1,8 +1,8 @@
 from typing import List
 
-from project.appointment import Appointment
-from project.company import Company
-from project.employee import Employee
+from project.appointments import Appointment
+from project.companies import Company
+from project.employees import Employee
 
 
 class Trainer:

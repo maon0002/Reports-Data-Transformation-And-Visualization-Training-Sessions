@@ -10,8 +10,6 @@ import tkinter
 from tkinter import filedialog
 
 
-
-
 class Import:
 
     @staticmethod
@@ -49,7 +47,8 @@ class Import:
                                     'Notes': 'string',
                                     'Label': 'string',
                                     'Scheduled By': 'string',
-                                    'Име на компанията, в която работите | Name of the company you work for  ': 'string',
+                                    'Име на компанията, в която работите | Name of the company you work for  ':
+                                        'string',
                                     'Предпочитани платформи | Preferred platforms  ': 'string',
                                     'Appointment ID': 'string'},
                                 converters={
@@ -75,26 +74,6 @@ class Import:
         return limitations_df
 
 
-class Transform:
-
-    @staticmethod
-    def annual_to_monthly_report_df(report_dataframe: pd.DataFrame, datetime_format: str) -> pd.DataFrame:
-        chosen_month = input(f"Please chose the Year and the Month (YYYY-MM)\n"
-                             f"for the monthly reports in a correct format\n"
-                             f"*'2023-03' for example is March 2023:   ")
-        chosen_month_obj = datetime.strptime(chosen_month + "-01 00:00:00", datetime_format)
-
-        chosen_month = pd.Series(chosen_month_obj).dt.to_period('M')
-        monthly_data_df = report_dataframe.loc[report_dataframe['start_time'].dt.to_period('M').isin(chosen_month)]. \
-            reset_index(drop=True)
-        return monthly_data_df
-
-    @staticmethod
-    def sorted_dataframe(dataframe: pd.DataFrame, column: str):
-        dataframe.sort_values(by=column, ascending=False, inplace=True)
-        return dataframe
-
-
 class Export:
     __export_folder = "exports/"
 
@@ -112,7 +91,7 @@ class Export:
 
     @staticmethod
     # def df_to_csv(dataframe: pd.DataFrame, name: str, datetime_format: str) -> None:
-    def df_to_csv(dataframe: pd.DataFrame, name: str, suffix: str) -> None:
+    def df_to_csv(dataframe: pd.DataFrame, name: str) -> None:
         """
         Converts the DateFrame with the data to .csv
         :param suffix:
@@ -120,7 +99,7 @@ class Export:
         :param name: depends on instance name
         :return: nothing
         """
-        dataframe.to_csv(f"{Export.__export_folder}{name}{suffix}.csv", encoding='utf-8', index=False)
+        dataframe.to_csv(f"{Export.__export_folder}{name}.csv", encoding='utf-8', index=False)
 
     @staticmethod
     def company_trainer_df_to_xlsx(name: str, suffix: str, col_list: list, df: pd.DataFrame, main_col: str,
@@ -149,8 +128,8 @@ class Export:
     @staticmethod
     def general_reports_to_xlsx(name: str, suffix: str, df_general_list: list, df_raw_list: list, dfs: list,
                                 df_mont: pd.DataFrame, df_full: pd.DataFrame):
-    # def general_reports_to_xlsx(name: str, suffix: str, df_general_list: list, df_raw_list: list,
-    # df_mont: pd.DataFrame, df_full: pd.DataFrame):
+        # def general_reports_to_xlsx(name: str, suffix: str, df_general_list: list, df_raw_list: list,
+        # df_mont: pd.DataFrame, df_full: pd.DataFrame):
         with pd.ExcelWriter(f'{name}{suffix}.xlsx', engine='xlsxwriter') as ew:
             # [print(x) for x in dfs]
             [print(x) for x in dfs]

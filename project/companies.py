@@ -1,5 +1,5 @@
 from typing import List
-from project.employee import Employee
+from project.employees import Employee
 
 
 class Company:

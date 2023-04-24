@@ -388,7 +388,7 @@ annual_data = pd.read_csv("annual_data.csv",
                               'Email': to_lower, 'Work email | Служебен имейл': to_lower},
                           ).fillna(np.nan).replace([np.nan], [None])
 
-# create a dataframe for the current month only using the last row from the annual report as YEAR-MONT value
+# create a dataframe for the current month only using the last row from the annual build_report as YEAR-MONT value
 last_row_value = (annual_data['Start Time'].tail(1).dt.to_period('M'))
 monthly_data = annual_data.loc[annual_data['Start Time'].dt.to_period('M').isin(last_row_value)].reset_index(drop=True)
 

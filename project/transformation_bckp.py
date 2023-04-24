@@ -5,7 +5,7 @@ import logging
 
 from project.dataframes import BaseDataframe
 from project.file_operations import Import, Transform, Export
-from project.collection import Collection
+from project.collections import Collection
 
 logging.basicConfig(filename='info.log', encoding='utf-8',
                     level=logging.INFO,

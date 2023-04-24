@@ -1,9 +1,20 @@
 from typing import List, Dict
-
 import pandas as pd
 
 
 class Collection:
+
+    @staticmethod
+    def date_default_format():
+        return "%d-%b-%Y"
+
+    @staticmethod
+    def datetime_default_format():
+        return "%d-%b-%Y %H:%M:%S"
+
+    @staticmethod
+    def datetime_final_format():
+        return "%Y-%m-%d %H:%M:%S"
 
     @staticmethod
     def flags_dict() -> dict:
