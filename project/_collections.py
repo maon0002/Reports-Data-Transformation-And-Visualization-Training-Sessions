@@ -193,8 +193,14 @@ class Collection:
         return ['new_monthly_data_df', 'new_full_data_df', 'limitations', 'flags_data']
 
     @staticmethod
-    def general_report_list() -> List[str]:
-        return ['total_trainings_df', 'trainers_report_df']
+    def generic_report_list() -> List[str]:
+        return [
+            "total_trainings_df",
+            "report_trainers_df",
+            "new_monthly_data_df",
+            "new_full_data_df",
+            "limitations_df",
+            "flags_data_df"]
 
     @staticmethod
     def company_report_list(new_monthly_data_df) -> List[str]:

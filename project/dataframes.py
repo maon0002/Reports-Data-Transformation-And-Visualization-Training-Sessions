@@ -3,7 +3,7 @@ from typing import List
 import pandas as pd
 import logging
 from project.file_operations import Import, Export
-from project.collections import Collection
+from project._collections import Collection
 
 
 class BaseDataframe:
@@ -171,13 +171,13 @@ class BaseDataframe:
 
     @staticmethod
     def datetime_normalize(df: pd.DataFrame) -> pd.DataFrame:
-        df = df.apply(lambda x: x.strftime(Collection.datetime_default_format))
+        df = df.apply(lambda x: x.strftime(Collection.datetime_default_format()))
         return df
 
     @staticmethod
     def date_normalize(df: pd.DataFrame) -> pd.DataFrame:
         df = pd.to_datetime(df).dt.date
-        df = df.apply(lambda x: x.strftime(Collection.date_default_format))
+        df = df.apply(lambda x: x.strftime(Collection.date_default_format()))
         return df
 
     @staticmethod
@@ -186,7 +186,7 @@ class BaseDataframe:
         return diff
 
     @staticmethod
-    def total_trainings_func(df_mont: pd.DataFrame, df_full: pd.DataFrame) -> pd.DataFrame:
+    def total_trainings_func(df_mont: pd.DataFrame, df_full: pd.DataFrame) -> List[pd.DataFrame]:
         # get and transform the trainings data on a total level
         trainings_column_list_init = Collection.trainings_columns()[0]
         df = df_mont[trainings_column_list_init]
@@ -198,9 +198,10 @@ class BaseDataframe:
         # insert two additional columns with default values
         df.insert(10, "language", 'Български', allow_duplicates=False)
         df.insert(10, "status", 'Проведен', allow_duplicates=False)
+        total_trainings_df = df
         trainings_column_list_final = Collection.trainings_columns()[1]
-        df = df[trainings_column_list_final]
-        return df
+        report_trainers_df = df[trainings_column_list_final]
+        return [total_trainings_df, report_trainers_df]
 
     @staticmethod
     def limitations_func(limitations_df: pd.DataFrame):

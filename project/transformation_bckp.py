@@ -5,7 +5,7 @@ import logging
 
 from project.dataframes import BaseDataframe
 from project.file_operations import Import, Transform, Export
-from project.collections import Collection
+from project._collections import Collection
 
 logging.basicConfig(filename='info.log', encoding='utf-8',
                     level=logging.INFO,
@@ -258,7 +258,7 @@ class Transformation:
                                            'bgn_per_hour'],
                                           "count")
 
-        Export.general_reports_to_xlsx(self.name, "_REPORTS_GENERAL", Collection.general_report_list(),
+        Export.general_reports_to_xlsx(self.name, "_REPORTS_GENERAL", Collection.generic_report_list(),
                                        Collection.raw_report_list(), self.dataframes_list, new_monthly_data_df,
                                        new_full_data_df)
 

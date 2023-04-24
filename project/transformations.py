@@ -1,7 +1,8 @@
+import re
 from datetime import datetime
-from typing import List
+from typing import List, Dict
 import pandas as pd
-from project.collections import Collection
+from project._collections import Collection
 from project.dataframes import BaseDataframe
 
 
@@ -9,10 +10,20 @@ class Transformation:
 
     @staticmethod
     def annual_to_monthly_report_df(report_dataframe: pd.DataFrame, datetime_format: str) -> pd.DataFrame:
-        chosen_month = input(f"Please chose the Year and the Month (YYYY-MM)\n"
-                             f"for the monthly reports in a correct format\n"
-                             f"*'2023-03' for example is March 2023:   ")
-        chosen_month_obj = datetime.strptime(chosen_month + "-01 00:00:00", datetime_format)
+        correct_input = False
+        chosen_month = None
+        while True:
+
+            if correct_input:
+                break
+            chosen_month = input(f"Please chose the Year and the Month (YYYY-MM)\n"
+                                 f"for the monthly reports in a correct format\n"
+                                 f"*'2023-03' for example is March 2023:   ")
+
+            correct_input = re.search(r'(\d{4}-\d{2})', chosen_month.strip())
+
+
+        chosen_month_obj = datetime.strptime(chosen_month.strip() + "-01 00:00:00", datetime_format)
 
         chosen_month = pd.Series(chosen_month_obj).dt.to_period('M')
         monthly_data_df = report_dataframe.loc[report_dataframe['start_time'].dt.to_period('M').isin(chosen_month)]. \
@@ -25,14 +36,12 @@ class Transformation:
         return dataframe
 
     @staticmethod
-    def main(self, dataframe: pd.DataFrame, limitations_df: pd.DataFrame) -> List[pd.DataFrame]:
+    def main(dataframe: pd.DataFrame, limitations_dataframe: pd.DataFrame) -> dict:
         """
         Transform the monthly and the annual df columns
         """
-        flags_data = pd.DataFrame(Collection.flags_dict())
-        limitations = BaseDataframe.limitations_func(limitations_df)
-        self.dataframes_list.append(BaseDataframe("new_limitations", limitations))
-
+        flags_data_df = pd.DataFrame(Collection.flags_dict())
+        limitations_df = BaseDataframe.limitations_func(limitations_dataframe)
         df = BaseDataframe.rename_original_report_columns(dataframe)
 
         # add column for issues
@@ -53,10 +62,10 @@ class Transformation:
         # get only the company name and if the training was IN PERSON/LIVE or ONLINE
         df = BaseDataframe.company_subtraction(df)
 
-        # merge/vlookup the columns from limitations to the monthly/annual df
+        # merge/vlookup the columns from limitations_df to the monthly/annual df
         df = pd.merge(
             left=df,
-            right=limitations,
+            right=limitations_df,
             left_on='company',
             right_on='company',
             how='left')
@@ -91,26 +100,34 @@ class Transformation:
 
         # define/make the raw reports and extract them to .csv
         full_raw_report_df = df
+        full_raw_report_df.attrs['name'] = "raw_full"
         monthly_raw_report_df = Transformation.annual_to_monthly_report_df(full_raw_report_df,
                                                                            Collection.datetime_final_format())
+        monthly_raw_report_df.attrs['name'] = "raw_mont"
 
         # separate and select only needed columns for new pd sets
         columns_list = Collection.new_data_columns()
 
         new_full_data_df = full_raw_report_df[columns_list]
+        new_full_data_df.attrs['name'] = "new_full"
         new_monthly_data_df = monthly_raw_report_df[columns_list]
+        new_monthly_data_df.attrs['name'] = "new_mont"
 
-        total_trainings_df = BaseDataframe.total_trainings_func(new_monthly_data_df, new_full_data_df)
+        total_trainings_df = BaseDataframe.total_trainings_func(new_monthly_data_df, new_full_data_df)[0]
+        total_trainings_df.attrs['name'] = "total_trainings"
+        report_trainers_df = BaseDataframe.total_trainings_func(new_monthly_data_df, new_full_data_df)[1]
+        report_trainers_df.attrs['name'] = "report_trainers"
 
-        self.dataframes_list.append(BaseDataframe("raw_report_full", full_raw_report_df))
-        self.dataframes_list.append(BaseDataframe("raw_report_mont", monthly_raw_report_df))
-        self.dataframes_list.append(BaseDataframe("new_report_full", new_full_data_df))
-        self.dataframes_list.append(BaseDataframe("new_report_mont", new_monthly_data_df))
-        self.dataframes_list.append(BaseDataframe("total_trainings", total_trainings_df))
+        # [print(x) for x in locals() if x.endswith("_df")]
+        dfs_dict = {
+            "total_trainings_df": total_trainings_df,
+            "report_trainers_df": report_trainers_df,
+            "new_monthly_data_df": new_monthly_data_df,
+            "new_full_data_df": new_full_data_df,
+            "limitations_df": limitations_df,
+            "flags_data_df": flags_data_df,
+            "full_raw_report_df": full_raw_report_df,
+            "monthly_raw_report_df": monthly_raw_report_df,
+        }
 
-        return [full_raw_report_df,
-                monthly_raw_report_df,
-                new_full_data_df,
-                new_monthly_data_df,
-                total_trainings_df
-                ]
+        return dfs_dict
