@@ -115,19 +115,11 @@ class Export:
                 invoice_data_df = invoice_data_df_init.value_counts()
                 rate_per_hour = float(dataframe.loc[company_filter, 'bgn_per_hour'].unique())
                 invoice_data_dict = invoice_data_df.to_dict()
-                # print(invoice_data_df_init)
-                # print(invoice_data_df)
-                # print(invoice_data_dict)
                 BaseInvoice.create_invoice(value, rate_per_hour, invoice_data_dict)
-
-
                 new_df = dataframe.loc[company_filter, 'nickname'].value_counts().reset_index(name='count')
                 new_df.loc[-1, 'total'] = new_df['count'].sum()
                 new_df.to_excel(ew, sheet_name=value, header=['Employee ID', 'Bookings', 'Total'],
                                 index=False)
-
-    # df.loc[(df['start_time'] >= df['starts']) &
-    #        (df['start_time'] <= df['ends']) &  dataframe.loc[(dataframe['company'] == value)][['nickname',]]
 
     @staticmethod
     def trainers_df_to_excel(name: str, dataframe: pd.DataFrame, column_list: List[str] = None):
@@ -279,7 +271,6 @@ class Export:
                 .unstack()
             annual_stats_by_emp_by_year['Total'] = annual_stats_by_emp_by_year.agg("sum", axis='columns')
             annual_stats_by_emp_by_year.loc[-1, 'Grand Total'] = annual_stats_by_year['Total'].sum()
-            print(annual_stats_by_emp_by_year.columns)
             annual_stats_by_emp_by_year.to_excel(ew, sheet_name='by_emp_by_year',
                                                  index=['company', 'nickname'],
                                                  index_label=['Company', 'EmployeeID'],
