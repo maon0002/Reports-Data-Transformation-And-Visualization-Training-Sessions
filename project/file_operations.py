@@ -1,5 +1,8 @@
 # coding: utf8
 import logging
+from datetime import datetime
+import zipfile
+import glob
 from typing import List
 import numpy as np
 import pandas as pd
@@ -111,7 +114,6 @@ class Export:
 
                 # use the dataframe filtering for getting data and pass it to the invoice creator
                 invoice_data_df_init = dataframe.loc[company_filter][['nickname', 'type']]
-                # invoice_data_df = dataframe.loc[company_filter, 'nickname'].value_counts()
                 invoice_data_df = invoice_data_df_init.value_counts()
                 rate_per_hour = float(dataframe.loc[company_filter, 'bgn_per_hour'].unique())
                 invoice_data_dict = invoice_data_df.to_dict()
@@ -286,3 +288,17 @@ class Export:
                                                        index_label=['Company', 'EmployeeID'],
                                                        header=['Count', 'Grand Total'],
                                                        freeze_panes=(1, 4))
+
+
+class ZipFiles:
+
+    @staticmethod
+    def zip_export_folder():
+        dt = datetime.now()
+        dt_string = dt.strftime("%d-%m-%Y_%H-%M-%S")
+        with zipfile.ZipFile(f'archives/reports_and_invoices_{dt_string}.zip', 'w') as f:
+            for file in glob.glob('exports/*'):
+                f.write(file)
+
+
+ZipFiles.zip_export_folder()

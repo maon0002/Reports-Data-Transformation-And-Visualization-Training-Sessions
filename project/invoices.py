@@ -9,7 +9,11 @@ class BaseInvoice:
     __invoice_next_seq_file = "invoice_next_seq.txt"
 
     @staticmethod
-    def get_invoice_number():
+    def get_invoice_number() -> str:
+        """
+        It gets a number from a .txt file, adds 1 to be ready for the next invoice seq number
+        :return: seq number as a string to be used as invoice number (for example 1111111112)
+        """
         seq_file = f"imports/{BaseInvoice.__invoice_next_seq_file}"
         invoice_current_number = 0
         f = open(seq_file, "r+")
@@ -22,13 +26,29 @@ class BaseInvoice:
         return invoice_current_number
 
     @staticmethod
-    def update_invoice_number(path, new_number):
+    def update_invoice_number(path, new_number) -> None:
+        """
+        Clear the file with the previous invoice number and replaced it with a new number (old number + 1)
+        :param path: path to the file which contains one number, the number of the current invoice
+        :param new_number: new number with which the old number from the .txt must be replaced (for example 1111111113)
+        :return: nothing
+        """
         f = open(path, "r+")
         f.write(str(new_number))
         f.close()
 
     @staticmethod
-    def create_invoice(recipient: str, price: float, data_dict: dict):
+    def create_invoice(recipient: str, price: float, data_dict: dict) -> None:
+        """
+        During the data aggregation for the .xlsx reports for each company, this function generates an invoice on a
+        employee/service level
+        :param recipient: company name
+        :param price: the price for the company based on the contract with the service provider
+        :param data_dict: the data from the dataframe, converted into dictionary in the following format:
+        {('NICKNAME', 'COMPANY:Description in Bulgarian | Description in English'): quantity(int)}
+        example: {('TORADGRA', 'QuantumPeak:Тренинг за лидери на живо | Leadership training in person'): 1}
+        :return: nothing
+        """
         os.environ["INVOICE_LANG"] = "en"
         client = Client(recipient)
         provider = Provider(summary='CouchMe', address='Couching str. 55A', zip_code='1000', city='Indore',
@@ -42,7 +62,7 @@ class BaseInvoice:
         invoice.currency = 'BGN'
         invoice.logo_filename = "project/images/logo.png"
         invoice.number = BaseInvoice.get_invoice_number()
-
+        invoice.use_tax = True
         for data in data_dict.items():
             nickname = data[0][0]
             service = data[0][1]
@@ -50,25 +70,5 @@ class BaseInvoice:
             price_per_unit = price
             description = f"Employee: {nickname} for >>> '{service}'"
             invoice.add_item(Item(units, price_per_unit, description=description, tax=15))
-
         document = SimpleInvoice(invoice)
         document.gen(f"exports/invoice_{recipient}.pdf")
-
-
-#
-# test = BaseInvoice()
-#
-# test.create_invoice("MaonCorp", 55.00,
-#                     {('AGSHLASH', 'SunriseCorp: Тренинг за лидери на живо | Leadership training in person'): 2,
-#                      ('ANONTMON', 'SunriseCorp: Онлайн тренинг за лидери | Online leadership training'): 2,
-#                      ('SEARATAR', 'SunriseCorp: Тренинг за лидери на живо | Leadership training in person'): 2,
-#                      ('AYONRCON', 'SunriseCorp: Онлайн тренинг за лидери | Online leadership training'): 1,
-#                      ('DEATAKAT', 'SunriseCorp: Тренинг за лидери на живо | Leadership training in person'): 1,
-#                      ('DIELEBEL', 'SunriseCorp: Онлайн тренинг за лидери | Online leadership training'): 1,
-#                      ('GEHUPCHU', 'SunriseCorp: Онлайн тренинг за лидери | Online leadership training'): 1,
-#                      ('KAAMIRAM', 'SunriseCorp: Тренинг за лидери на живо | Leadership training in person'): 1,
-#                      ('MAARNARI', 'SunriseCorp: Онлайн тренинг за лидери | Online leadership training'): 1,
-#                      ('PAANGAVI', 'SunriseCorp: Онлайн тренинг за лидери | Online leadership training'): 1,
-#                      ('PEANGMAN', 'SunriseCorp: Тренинг за лидери на живо | Leadership training in person'): 1,
-#                      ('PERUSKRU', 'SunriseCorp: Тренинг за лидери на живо | Leadership training in person'): 1,
-#                      ('SEARVPAR', 'SunriseCorp: Тренинг за лидери на живо | Leadership training in person'): 1})

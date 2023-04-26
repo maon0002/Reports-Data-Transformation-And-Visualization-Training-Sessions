@@ -4,7 +4,7 @@ from typing import List
 import pandas as pd
 import logging
 from project.dataframes import BaseDataframe
-from project.file_operations import Import, Export
+from project.file_operations import Import, Export, ZipFiles
 from project._collections import Collection
 from project.transformations import Transformation
 
@@ -82,3 +82,4 @@ original_report = Import.import_report('imports/schedule2023-04-18.csv')
 limitations_file = Import.import_limitations('imports/limitations.csv')
 
 Report.build_report(original_report, limitations_file)
+ZipFiles.zip_export_folder()
