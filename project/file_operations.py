@@ -3,6 +3,8 @@ import logging
 from datetime import datetime
 import zipfile
 import glob
+import shutil
+import os
 from typing import List
 import numpy as np
 import pandas as pd
@@ -291,14 +293,53 @@ class Export:
 
 
 class ZipFiles:
+    __folder_path = "archives/"
 
     @staticmethod
     def zip_export_folder():
+        # tkinter.Tk().withdraw()  # prevents an empty tkinter window from appearing
+        # folder_path = filedialog.askdirectory()
         dt = datetime.now()
         dt_string = dt.strftime("%d-%m-%Y_%H-%M-%S")
-        with zipfile.ZipFile(f'archives/reports_and_invoices_{dt_string}.zip', 'w') as f:
+        with zipfile.ZipFile(f'{ZipFiles.__folder_path}reports_and_invoices_{dt_string}.zip', 'w') as f:
             for file in glob.glob('exports/*'):
                 f.write(file)
 
+    @staticmethod
+    def zip_export_invoices():
+        dt = datetime.now()
+        dt_string = dt.strftime("%d-%m-%Y_%H-%M-%S")
+        with zipfile.ZipFile(f'{ZipFiles.__folder_path}invoices_{dt_string}.zip', 'w') as f:
+            for file in glob.glob('exports/*.pdf'):
+                f.write(file)
 
-ZipFiles.zip_export_folder()
+    @staticmethod
+    def zip_export_reports():
+        dt = datetime.now()
+        dt_string = dt.strftime("%d-%m-%Y_%H-%M-%S")
+        with zipfile.ZipFile(f'{ZipFiles.__folder_path}reports_{dt_string}.zip', 'w') as f:
+            for file in glob.glob('exports/*.csv'):
+                f.write(file)
+            for file in glob.glob('exports/*.xlsx'):
+                f.write(file)
+
+
+class Clearing:
+
+    @staticmethod
+    def delete_files_from_folder(extensions: list):
+        # Search files with .txt extension in current directory
+        for ext in extensions:
+            pdf_pattern = f"exports/*.{ext}"
+            files = glob.glob(pdf_pattern)
+            # deleting the files with pdf extension
+            for file in files:
+                os.remove(file)
+
+
+# ZipFiles.zip_export_folder()
+# ZipFiles.zip_export_invoices()
+# ZipFiles.zip_export_reports()
+# Clearing.delete_all_files_from_folder("exports/")
+
+Clearing.delete_files_from_folder(["csv", "pdf", "xlsx"])
