@@ -194,7 +194,6 @@ class BaseDataframe:
         # add column for the number of trainings left based on the company contract and used trainings by the employee
         df = pd.merge(df, df_full[['concat_emp_company', 'training_datetime', 'trainings_left']],
                       on=['concat_emp_company', 'training_datetime'], how='inner')
-
         # insert two additional columns with default values
         df.insert(10, "language", 'Български', allow_duplicates=False)
         df.insert(10, "status", 'Проведен', allow_duplicates=False)

@@ -81,6 +81,7 @@ class Import:
 
 class Export:
     __export_folder = "exports/"
+    __archive_folder = "archives/"
 
     @staticmethod
     def df_to_excel(dataframe: pd.DataFrame, name: str, suffix: str) -> None:
@@ -99,7 +100,6 @@ class Export:
     def df_to_csv(dataframe: pd.DataFrame, name: str) -> None:
         """
         Converts the DateFrame with the data to .csv
-        :param suffix:
         :param dataframe: transformed from BaseWebsite._data_dict
         :param name: depends on instance name
         :return: nothing
@@ -110,16 +110,21 @@ class Export:
     def companies_df_to_excel(name: str, dataframe: pd.DataFrame, column_list: List[str] = None):
         # preparing the new df by company (is_valid == 1) in scope + (is_valid == 0) out of the project scope
         with pd.ExcelWriter(f'{Export.__export_folder}{name}.xlsx', engine='xlsxwriter') as ew:
-            # add worksheets for the consultancies in scope
+            # add worksheets for the trainings in scope
             for value in column_list:
                 company_filter = (dataframe['company'] == value)
 
                 # use the dataframe filtering for getting data and pass it to the invoice creator
-                invoice_data_df_init = dataframe.loc[company_filter][['nickname', 'type']]
+                invoice_data_df_init = dataframe.loc[company_filter &
+                                                     (dataframe['is_valid'] == 1)][['nickname', 'type']]
+
                 invoice_data_df = invoice_data_df_init.value_counts()
                 rate_per_hour = float(dataframe.loc[company_filter, 'bgn_per_hour'].unique())
                 invoice_data_dict = invoice_data_df.to_dict()
-                BaseInvoice.create_invoice(value, rate_per_hour, invoice_data_dict)
+
+                if invoice_data_dict:
+                    BaseInvoice.create_invoice(value, rate_per_hour, invoice_data_dict)
+
                 new_df = dataframe.loc[company_filter, 'nickname'].value_counts().reset_index(name='count')
                 new_df.loc[-1, 'total'] = new_df['count'].sum()
                 new_df.to_excel(ew, sheet_name=value, header=['Employee ID', 'Bookings', 'Total'],
@@ -132,7 +137,7 @@ class Export:
                 new_df = dataframe[(dataframe['trainer'] == value)][
                     ['company', 'training_datetime', 'employee_names', 'short_type', 'bgn_per_hour']]
                 # add two columns for totals
-                new_df.loc[-1, 'total_consultancies'] = new_df['training_datetime'].count()
+                new_df.loc[-1, 'total_trainings'] = new_df['training_datetime'].count()
                 new_df.loc[-1, 'total_pay'] = str(new_df['bgn_per_hour'].sum()) + ".лв"
                 new_df.to_excel(ew, sheet_name=value,
                                 header=['Компания', 'Време на тренинга', 'Имена на служител', 'Вид', 'Лв на час',
@@ -158,12 +163,12 @@ class Export:
             filter_for_actual_contracts = (mont_df['is_valid'] == 1)
             month_stats_emp = mont_df[['nickname', 'company']] \
                 .value_counts() \
-                .reset_index(name='Consultations per Employee') \
+                .reset_index(name='Trainings per Employee') \
                 .sort_values(by='nickname')
-            month_stats_emp.loc[-1, 'total'] = month_stats_emp['Consultations per Employee'].sum()
+            month_stats_emp.loc[-1, 'total'] = month_stats_emp['Trainings per Employee'].sum()
             month_stats_emp.to_excel(ew, sheet_name='by employee',
                                      index=False,
-                                     header=['EmployeeID', 'Company', 'Consultancies', 'Total'],
+                                     header=['EmployeeID', 'Company', 'trainings', 'Total'],
                                      freeze_panes=(1, 4))
             # add sheet for statistical monthly data by Company
             month_stats_comp = mont_df[['company', 'nickname', 'concat_emp_company']]
@@ -178,7 +183,7 @@ class Export:
             month_stats_comp_pivot.to_excel(ew, sheet_name='by company',
                                             index=['company'],
                                             index_label=['Company', 'EmployeeID'],
-                                            header=['Consultancies'],
+                                            header=['trainings'],
                                             freeze_panes=(1, 3))
             # add sheet for statistical monthly data by Trainer
             month_stats_trainer = mont_df[['trainer', 'nickname', 'concat_emp_company']]
@@ -193,9 +198,9 @@ class Export:
             month_stats_trainer.to_excel(ew, sheet_name='by Trainer',
                                          index=['trainer', 'nickname'],
                                          index_label=['Trainer', 'EmployeeID'],
-                                         header=['Consultancies'],
+                                         header=['trainings'],
                                          freeze_panes=(1, 3))
-            # add sheet for statistical monthly data for Copmany's total
+            # add sheet for statistical monthly data for Company's total
             month_stats_comp_total = mont_df[['company', 'concat_emp_company', 'bgn_per_hour']]
             month_stats_comp_total = pd.pivot_table(month_stats_comp_total,
                                                     index=['company'],
@@ -208,7 +213,7 @@ class Export:
             month_stats_comp_total.to_excel(ew, sheet_name='company_total',
                                             index=['company'],
                                             index_label='Company',
-                                            header=['BGN', 'Total Consultancies'],
+                                            header=['BGN', 'Total trainings'],
                                             freeze_panes=(1, 3))
             # add sheet for statistical monthly data for Trainer's total
             month_stats_trainer__total = mont_df[['trainer', 'bgn_per_hour', 'is_valid']]
@@ -223,7 +228,7 @@ class Export:
             month_stats_trainer__total.to_excel(ew, sheet_name='trainer_total',
                                                 index=['trainer'],
                                                 index_label='Trainer',
-                                                header=['BGN', 'Total Consultancies'],
+                                                header=['BGN', 'Total trainings'],
                                                 freeze_panes=(1, 3))
 
     @staticmethod
@@ -242,7 +247,7 @@ class Export:
                 how='left')
             annual_stats_general.to_excel(ew, sheet_name='company_general',
                                           index=False,
-                                          header=['Company', 'Total Consultancies', '%Percentage'],
+                                          header=['Company', 'Total trainings', '%Percentage'],
                                           freeze_panes=(1, 3)
                                           )
             # add sheet for statistical annual data by Company and Year
@@ -267,7 +272,7 @@ class Export:
                 how='left')
             annual_stats_unique_emp.to_excel(ew, sheet_name='company_unique_emp',
                                              index=False,
-                                             header=['Company', 'Total Consultancies', '%Percentage'],
+                                             header=['Company', 'Total trainings', '%Percentage'],
                                              freeze_panes=(1, 3))
             # add sheet for statistical annual data by Employee, by Year
             annual_stats_by_emp_by_year = full_df[['company', 'nickname', 'year']]
@@ -279,17 +284,29 @@ class Export:
                                                  index=['company', 'nickname'],
                                                  index_label=['Company', 'EmployeeID'],
                                                  freeze_panes=(1, 7))
-            # add sheet for statistical annual data by Company and Employees with only 1 consultation
-            annual_stats_by_emp_with_one_cons = full_df[(full_df['returns_or_not'] == 'only one session')].reset_index()
-            annual_stats_by_emp_with_one_cons = pd.DataFrame(
-                annual_stats_by_emp_with_one_cons[['company', 'nickname']].value_counts().to_frame())
-            annual_stats_by_emp_with_one_cons.loc[-1, 'Grand Total'] = annual_stats_by_emp_with_one_cons['count'].sum()
-            # plot = annual_stats_by_emp_with_one_cons.plot.pie(y='mass', figsize=(5, 5))
-            annual_stats_by_emp_with_one_cons.to_excel(ew, sheet_name='by_emp_with_one_cons',
-                                                       index=['company', 'nickname'],
-                                                       index_label=['Company', 'EmployeeID'],
-                                                       header=['Count', 'Grand Total'],
-                                                       freeze_panes=(1, 4))
+            # add sheet for statistical annual data by Company and Employees with only 1 training
+            annual_stats_by_emp_with_one_training = full_df[
+                (full_df['returns_or_not'] == 'only one session')].reset_index()
+            annual_stats_by_emp_with_one_training = pd.DataFrame(
+                annual_stats_by_emp_with_one_training[['company', 'nickname']].value_counts().to_frame())
+            annual_stats_by_emp_with_one_training.loc[-1, 'Grand Total'] = annual_stats_by_emp_with_one_training[
+                'count'].sum()
+            # plot = annual_stats_by_emp_with_one_training.plot.pie(y='mass', figsize=(5, 5))
+            annual_stats_by_emp_with_one_training.to_excel(ew, sheet_name='by_emp_with_one_training',
+                                                           index=['company', 'nickname'],
+                                                           index_label=['Company', 'EmployeeID'],
+                                                           header=['Count', 'Grand Total'],
+                                                           freeze_panes=(1, 4))
+
+    @staticmethod
+    def save_zip_via_browser():
+        tkinter.Tk().withdraw()  # prevents an empty tkinter window from appearing
+        original_file = os.listdir(Export.__archive_folder)[0]
+        new_file = "all_data.zip"
+        target_path = filedialog.askdirectory()
+        original = fr'{Export.__archive_folder}{original_file}'
+        target = fr'{target_path}\{new_file}'
+        shutil.copyfile(original, target)
 
 
 class ZipFiles:
@@ -297,31 +314,35 @@ class ZipFiles:
 
     @staticmethod
     def zip_export_folder():
-        # tkinter.Tk().withdraw()  # prevents an empty tkinter window from appearing
-        # folder_path = filedialog.askdirectory()
         dt = datetime.now()
         dt_string = dt.strftime("%d-%m-%Y_%H-%M-%S")
-        with zipfile.ZipFile(f'{ZipFiles.__folder_path}reports_and_invoices_{dt_string}.zip', 'w') as f:
-            for file in glob.glob('exports/*'):
+        tkinter.Tk().withdraw()  # prevents an empty tkinter window from appearing
+        target_dir_path = filedialog.askdirectory()
+        new_file = f"reports_and_invoices_{dt_string}.zip"
+        save_as = fr'{target_dir_path}\{new_file}'
+        with zipfile.ZipFile(f'{save_as}', 'w') as f:
+            # with zipfile.ZipFile(f'{ZipFiles.__folder_path}reports_and_invoices_{dt_string}.zip', 'w') as f:
+            # exclude manifests files (files starting with _) with glob: [!_]
+            for file in glob.glob(f'exports/[!_]*'):
                 f.write(file)
 
-    @staticmethod
-    def zip_export_invoices():
-        dt = datetime.now()
-        dt_string = dt.strftime("%d-%m-%Y_%H-%M-%S")
-        with zipfile.ZipFile(f'{ZipFiles.__folder_path}invoices_{dt_string}.zip', 'w') as f:
-            for file in glob.glob('exports/*.pdf'):
-                f.write(file)
-
-    @staticmethod
-    def zip_export_reports():
-        dt = datetime.now()
-        dt_string = dt.strftime("%d-%m-%Y_%H-%M-%S")
-        with zipfile.ZipFile(f'{ZipFiles.__folder_path}reports_{dt_string}.zip', 'w') as f:
-            for file in glob.glob('exports/*.csv'):
-                f.write(file)
-            for file in glob.glob('exports/*.xlsx'):
-                f.write(file)
+    # @staticmethod
+    # def zip_export_invoices():
+    #     dt = datetime.now()
+    #     dt_string = dt.strftime("%d-%m-%Y_%H-%M-%S")
+    #     with zipfile.ZipFile(f'{ZipFiles.__folder_path}invoices_{dt_string}.zip', 'w') as f:
+    #         for file in glob.glob('exports/*.pdf'):
+    #             f.write(file)
+    #
+    # @staticmethod
+    # def zip_export_reports():
+    #     dt = datetime.now()
+    #     dt_string = dt.strftime("%d-%m-%Y_%H-%M-%S")
+    #     with zipfile.ZipFile(f'{ZipFiles.__folder_path}reports_{dt_string}.zip', 'w') as f:
+    #         for file in glob.glob('exports/*.csv'):
+    #             f.write(file)
+    #         for file in glob.glob('exports/*.xlsx'):
+    #             f.write(file)
 
 
 class Clearing:
@@ -345,11 +366,9 @@ class Clearing:
         for file in files:
             os.remove(file)
 
-
 # ZipFiles.zip_export_folder()
 # ZipFiles.zip_export_invoices()
 # ZipFiles.zip_export_reports()
-# Clearing.delete_all_files_from_folder("exports/")
-
 # Clearing.delete_files_from_folder(["csv", "pdf", "xlsx"])
 # Clearing.delete_all_zip_from_archive_folder()
+# Export.save_zip_via_browser()

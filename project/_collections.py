@@ -162,18 +162,14 @@ class Collection:
             'trainer',
             'short_type'
         ], [
-            'concat_emp_company',
             'type',
-            'company',
-            'nickname',
-            'training_datetime',
-            'employee_names',
-            'work_email',
             'trainer',
-            'trainings_left',
+            'company',
+            "employee_names",
+            'training_datetime',
+            'work_email',
             'short_type',
-            'status',
-            'language'
+            'status'
         ]]
 
     @staticmethod

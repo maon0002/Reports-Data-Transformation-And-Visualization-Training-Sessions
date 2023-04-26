@@ -4,7 +4,7 @@ from typing import List
 import pandas as pd
 import logging
 from project.dataframes import BaseDataframe
-from project.file_operations import Import, Export, ZipFiles
+from project.file_operations import Import, Export, ZipFiles, Clearing
 from project._collections import Collection
 from project.transformations import Transformation
 
@@ -83,3 +83,5 @@ limitations_file = Import.import_limitations('imports/limitations.csv')
 
 Report.build_report(original_report, limitations_file)
 ZipFiles.zip_export_folder()
+Clearing.delete_files_from_folder(["csv", "pdf", "xlsx"])
+Clearing.delete_all_zip_from_archive_folder()

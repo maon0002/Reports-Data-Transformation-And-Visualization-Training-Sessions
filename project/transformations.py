@@ -22,7 +22,6 @@ class Transformation:
 
             correct_input = re.search(r'(\d{4}-\d{2})', chosen_month.strip())
 
-
         chosen_month_obj = datetime.strptime(chosen_month.strip() + "-01 00:00:00", datetime_format)
 
         chosen_month = pd.Series(chosen_month_obj).dt.to_period('M')
@@ -109,16 +108,12 @@ class Transformation:
         columns_list = Collection.new_data_columns()
 
         new_full_data_df = full_raw_report_df[columns_list]
-        new_full_data_df.attrs['name'] = "new_full"
+
         new_monthly_data_df = monthly_raw_report_df[columns_list]
-        new_monthly_data_df.attrs['name'] = "new_mont"
 
-        total_trainings_df = BaseDataframe.total_trainings_func(new_monthly_data_df, new_full_data_df)[0]
-        total_trainings_df.attrs['name'] = "total_trainings"
-        report_trainers_df = BaseDataframe.total_trainings_func(new_monthly_data_df, new_full_data_df)[1]
-        report_trainers_df.attrs['name'] = "report_trainers"
+        total_trainings_df, report_trainers_df = \
+            BaseDataframe.total_trainings_func(new_monthly_data_df, new_full_data_df)
 
-        # [print(x) for x in locals() if x.endswith("_df")]
         dfs_dict = {
             "total_trainings_df": total_trainings_df,
             "report_trainers_df": report_trainers_df,

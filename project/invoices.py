@@ -60,7 +60,6 @@ class BaseInvoice:
         invoice.date = date.today()
         invoice.currency_locale = 'bg_BG.UTF-8'
         invoice.currency = 'BGN'
-        invoice.logo_filename = "project/images/logo.png"
         invoice.number = BaseInvoice.get_invoice_number()
         invoice.use_tax = True
         for data in data_dict.items():
