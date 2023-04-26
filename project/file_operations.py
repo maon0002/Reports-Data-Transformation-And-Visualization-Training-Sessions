@@ -332,9 +332,18 @@ class Clearing:
         for ext in extensions:
             pdf_pattern = f"exports/*.{ext}"
             files = glob.glob(pdf_pattern)
-            # deleting the files with pdf extension
+            # deleting the files with listed as argument extensions
             for file in files:
                 os.remove(file)
+
+    @staticmethod
+    def delete_all_zip_from_archive_folder():
+        # Search files with .txt extension in current directory
+        pdf_pattern = f"archives/*.zip"
+        files = glob.glob(pdf_pattern)
+        # deleting the files with zip extension
+        for file in files:
+            os.remove(file)
 
 
 # ZipFiles.zip_export_folder()
@@ -342,4 +351,5 @@ class Clearing:
 # ZipFiles.zip_export_reports()
 # Clearing.delete_all_files_from_folder("exports/")
 
-Clearing.delete_files_from_folder(["csv", "pdf", "xlsx"])
+# Clearing.delete_files_from_folder(["csv", "pdf", "xlsx"])
+# Clearing.delete_all_zip_from_archive_folder()
