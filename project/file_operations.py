@@ -11,7 +11,7 @@ import pandas as pd
 from project.invoices import BaseInvoice
 import tkinter
 from tkinter import filedialog
-
+from tkinter.filedialog import asksaveasfile
 from project._collections import Collection
 
 
@@ -27,55 +27,117 @@ class Import:
         return df.head(10)
 
     @staticmethod
-    def to_lower(x): return x.lower() if isinstance(x, str) else x
+    def to_lower(x):
+        return x.lower() if isinstance(x, str) else x
 
     @staticmethod
-    def import_report(path) -> pd.DataFrame:
-        # tkinter.Tk().withdraw()  # prevents an empty tkinter window from appearing
-        # folder_path = filedialog.askdirectory()
+    def import_report() -> pd.DataFrame:
+        expected_columns = ['Start Time', 'End Time', 'First Name', 'Last Name', 'Phone', 'Email', 'Type', 'Calendar',
+                            'Appointment Price', 'Paid?', 'Amount Paid Online', 'Certificate Code', 'Notes',
+                            'Date Scheduled', 'Label', 'Scheduled By',
+                            'Име на компанията, в която работите | Name of the company you work for  ',
+                            'Служебен имейл | Work email  ', 'Предпочитани платформи | Preferred platforms  ',
+                            'Appointment ID']
+        report_df = None
+        while True:
+            tkinter.Tk().withdraw()  # prevents an empty tkinter window from appearing
+            file_path = filedialog.askopenfilename(title='Select your report to import the data',
+                                                   filetypes=[("CSV (comma-separated values) file", ".csv")],
+                                                   defaultextension=".csv",
+                                                   )
+            if not file_path:
+                print(f"Please choose the .csv file with the General report!")
+                continue
 
-        report_df = pd.read_csv(path,
-                                parse_dates=['Start Time',
-                                             'End Time', 'Date Scheduled'],
-                                dayfirst=False,
-                                cache_dates=True,
-                                dtype={
-                                    'First Name': 'string',
-                                    'Last Name': 'string',
-                                    'Phone': 'string',
-                                    'Type': 'string',
-                                    'Calendar': 'string',
-                                    'Appointment Price': 'float',
-                                    'Paid?': 'string',
-                                    'Amount Paid Online': 'float',
-                                    'Certificate Code': 'string',
-                                    'Notes': 'string',
-                                    'Label': 'string',
-                                    'Scheduled By': 'string',
-                                    'Име на компанията, в която работите | Name of the company you work for  ':
-                                        'string',
-                                    'Предпочитани платформи | Preferred platforms  ': 'string',
-                                    'Appointment ID': 'string'},
-                                converters={
-                                    'Email': Import.to_lower, 'Служебен имейл | Work email  ': Import.to_lower}, ) \
-            .fillna(np.nan).replace([np.nan], [None])
+            columns_in_selected_file = pd.read_csv(file_path).columns
+            column_inconsistency_check = [x for x in zip(expected_columns, columns_in_selected_file) if x[0] != x[1]]
+
+            if column_inconsistency_check:
+                print(column_inconsistency_check, sep="\n")
+                message = [">>> The following columns are not matching expected order/names: "]
+                for items in column_inconsistency_check:
+                    expected = items[0]
+                    found = items[1]
+                    line_to_add = f"The expected column: '{expected}' is not equal to the '{found}' " \
+                                  f"column from the chosen file!"
+                    message.append(line_to_add)
+
+                print(f"Please check the column's consistency in the chosen file!\n",
+                      '\n'.join(message))
+                continue
+            else:
+                report_df = pd.read_csv(file_path,
+                                        parse_dates=['Start Time',
+                                                     'End Time', 'Date Scheduled'],
+                                        dayfirst=False,
+                                        cache_dates=True,
+                                        dtype={
+                                            'First Name': 'string',
+                                            'Last Name': 'string',
+                                            'Phone': 'string',
+                                            'Type': 'string',
+                                            'Calendar': 'string',
+                                            'Appointment Price': 'float',
+                                            'Paid?': 'string',
+                                            'Amount Paid Online': 'float',
+                                            'Certificate Code': 'string',
+                                            'Notes': 'string',
+                                            'Label': 'string',
+                                            'Scheduled By': 'string',
+                                            'Име на компанията, в която работите | Name of the company you work for  ':
+                                                'string',
+                                            'Предпочитани платформи | Preferred platforms  ': 'string',
+                                            'Appointment ID': 'string'},
+                                        converters={
+                                            'Email': Import.to_lower,
+                                            'Служебен имейл | Work email  ': Import.to_lower}, ) \
+                    .fillna(np.nan).replace([np.nan], [None])
+                break
         return report_df
 
     @staticmethod
-    def import_limitations(path):
-        # tkinter.Tk().withdraw()  # prevents an empty tkinter window from appearing
-        # folder_path = filedialog.askdirectory()
-        limitations_df = pd.read_csv(path,
-                                     names=['company', 'c_per_emp', 'c_per_month', 'prepaid',
-                                            'starts', 'ends', 'note', 'bgn_per_hour', 'is_valid'],
-                                     usecols=[0, 1, 2, 3, 4, 5, 7, 8, 9],
-                                     parse_dates=['starts', 'ends'],
-                                     dayfirst=True,
-                                     cache_dates=True,
-                                     skiprows=[0],
-                                     index_col=False,
-                                     keep_default_na=False,
-                                     )
+    def import_limitations():
+        expected_columns = ['COMPANY', 'C_PER_PERSON', 'C_PER_MONTH', 'PREPAID', 'START', 'END', 'DURATION DAYS',
+                            'NOTE', 'BGN_PER_HOUR', 'IS_VALID']
+        limitations_df = None
+        while True:
+            tkinter.Tk().withdraw()  # prevents an empty tkinter window from appearing
+            file_path = filedialog.askopenfilename(title='Select the file with the Limitations',
+                                                   filetypes=[("CSV (comma-separated values) file", ".csv")],
+                                                   defaultextension=".csv",
+                                                   )
+            if not file_path:
+                print(f"Please choose the .csv file with the predefined Limitations!")
+                continue
+
+            columns_in_selected_file = pd.read_csv(file_path).columns
+            column_inconsistency_check = [x for x in zip(expected_columns, columns_in_selected_file) if x[0] != x[1]]
+            if column_inconsistency_check:
+                print(column_inconsistency_check, sep="\n")
+                message = [">>> The following columns are not matching expected order/names: "]
+                for items in column_inconsistency_check:
+                    expected = items[0]
+                    found = items[1]
+                    line_to_add = f"The expected column: '{expected}' is not equal to the '{found}' " \
+                                  f"column from the chosen file!"
+                    message.append(line_to_add)
+
+                print(f"Please check the column's consistency in the chosen file!\n",
+                      '\n'.join(message))
+                continue
+            else:
+                limitations_df = pd.read_csv(file_path,
+                                             names=['company', 'c_per_emp', 'c_per_month', 'prepaid',
+                                                    'starts', 'ends', 'note', 'bgn_per_hour', 'is_valid'],
+                                             usecols=[0, 1, 2, 3, 4, 5, 7, 8, 9],
+                                             parse_dates=['starts', 'ends'],
+                                             dayfirst=True,
+                                             cache_dates=True,
+                                             skiprows=[0],
+                                             index_col=False,
+                                             keep_default_na=False,
+                                             )
+                break
         return limitations_df
 
 
@@ -96,7 +158,6 @@ class Export:
             dataframe.to_excel(ew, index=False)
 
     @staticmethod
-    # def df_to_csv(dataframe: pd.DataFrame, name: str, datetime_format: str) -> None:
     def df_to_csv(dataframe: pd.DataFrame, name: str) -> None:
         """
         Converts the DateFrame with the data to .csv
@@ -160,7 +221,6 @@ class Export:
     def stats_mont_df_to_excel(name: str, mont_df: pd.DataFrame):
         with pd.ExcelWriter(f'{Export.__export_folder}{name}.xlsx', engine='xlsxwriter') as ew:
             # add sheet for statistical monthly data by Employee
-            filter_for_actual_contracts = (mont_df['is_valid'] == 1)
             month_stats_emp = mont_df[['nickname', 'company']] \
                 .value_counts() \
                 .reset_index(name='Trainings per Employee') \
@@ -181,7 +241,7 @@ class Export:
                                                     fill_value=0,
                                                     sort=True)
             month_stats_comp_pivot.to_excel(ew, sheet_name='by company',
-                                            index=['company'],
+                                            index=True,
                                             index_label=['Company', 'EmployeeID'],
                                             header=['trainings'],
                                             freeze_panes=(1, 3))
@@ -196,7 +256,7 @@ class Export:
                                                  fill_value=0,
                                                  sort=True)
             month_stats_trainer.to_excel(ew, sheet_name='by Trainer',
-                                         index=['trainer', 'nickname'],
+                                         index=True,
                                          index_label=['Trainer', 'EmployeeID'],
                                          header=['trainings'],
                                          freeze_panes=(1, 3))
@@ -211,7 +271,7 @@ class Export:
                                                     fill_value=0,
                                                     sort=True)
             month_stats_comp_total.to_excel(ew, sheet_name='company_total',
-                                            index=['company'],
+                                            index=True,
                                             index_label='Company',
                                             header=['BGN', 'Total trainings'],
                                             freeze_panes=(1, 3))
@@ -226,7 +286,7 @@ class Export:
                                                         fill_value=0,
                                                         sort=True)
             month_stats_trainer__total.to_excel(ew, sheet_name='trainer_total',
-                                                index=['trainer'],
+                                                index=True,
                                                 index_label='Trainer',
                                                 header=['BGN', 'Total trainings'],
                                                 freeze_panes=(1, 3))
@@ -235,7 +295,7 @@ class Export:
     def stats_full_df_to_excel(name: str, full_df: pd.DataFrame):
         with pd.ExcelWriter(f'{Export.__export_folder}{name}.xlsx', engine='xlsxwriter') as ew:
             # add sheet for statistical annual data by Company with percentage
-            filter_for_actual_contracts_y = (full_df['is_valid'] == 1)
+            # filter_for_actual_contracts_y = (full_df['is_valid'] == 1)
             annual_stats_general1 = full_df[['company']].value_counts().reset_index()
             annual_stats_general2 = (full_df[['company']].
                                      value_counts(normalize=True).mul(100).round(2).astype(str) + '%').reset_index()
@@ -252,7 +312,7 @@ class Export:
                                           )
             # add sheet for statistical annual data by Company and Year
             annual_stats_by_year = full_df[['company', 'year']]
-            annual_stats_by_year = annual_stats_by_year.value_counts(['company', 'year']).unstack()  # .fillna(0)
+            annual_stats_by_year = annual_stats_by_year.value_counts(['company', 'year']).unstack()
             annual_stats_by_year['Total'] = annual_stats_by_year.agg("sum", axis='columns')
             annual_stats_by_year.loc[-1, 'Grand Total'] = annual_stats_by_year['Total'].sum()
             annual_stats_by_year.to_excel(ew, sheet_name='by_year',
@@ -291,58 +351,49 @@ class Export:
                 annual_stats_by_emp_with_one_training[['company', 'nickname']].value_counts().to_frame())
             annual_stats_by_emp_with_one_training.loc[-1, 'Grand Total'] = annual_stats_by_emp_with_one_training[
                 'count'].sum()
-            # plot = annual_stats_by_emp_with_one_training.plot.pie(y='mass', figsize=(5, 5))
             annual_stats_by_emp_with_one_training.to_excel(ew, sheet_name='by_emp_with_one_training',
-                                                           index=['company', 'nickname'],
+                                                           index=True,
                                                            index_label=['Company', 'EmployeeID'],
                                                            header=['Count', 'Grand Total'],
                                                            freeze_panes=(1, 4))
 
     @staticmethod
-    def save_zip_via_browser():
+    def save_zip_via_browser() -> str:
         tkinter.Tk().withdraw()  # prevents an empty tkinter window from appearing
+        target_path = asksaveasfile(filetypes=[("Zip archive", ".zip")],
+                                    defaultextension=".zip",
+                                    initialfile="all_data.zip",
+                                    title='Save all data/reports as Zip file')
         original_file = os.listdir(Export.__archive_folder)[0]
-        new_file = "all_data.zip"
-        target_path = filedialog.askdirectory()
-        original = fr'{Export.__archive_folder}{original_file}'
-        target = fr'{target_path}\{new_file}'
-        shutil.copyfile(original, target)
+        original_path = fr'{Export.__archive_folder}{original_file}'
+        if target_path:
+            shutil.copyfile(original_path, target_path.name)
+        else:
+            print("Please select where to save the reports '.zip' file")
+            Export.save_zip_via_browser()
+        return target_path
 
 
 class ZipFiles:
     __folder_path = "archives/"
 
     @staticmethod
-    def zip_export_folder():
+    def zip_export_folder() -> str:
         dt = datetime.now()
         dt_string = dt.strftime("%d-%m-%Y_%H-%M-%S")
-        tkinter.Tk().withdraw()  # prevents an empty tkinter window from appearing
-        target_dir_path = filedialog.askdirectory()
         new_file = f"reports_and_invoices_{dt_string}.zip"
-        save_as = fr'{target_dir_path}\{new_file}'
+        tkinter.Tk().withdraw()  # prevents an empty tkinter window from appearing
+        target_dir_path = asksaveasfile(filetypes=[("Zip archive file", ".zip")],
+                                        defaultextension=".zip",
+                                        initialfile=f"{new_file}",
+                                        title='Save all data/reports as Zip file')
+
+        save_as = target_dir_path.name
         with zipfile.ZipFile(f'{save_as}', 'w') as f:
-            # with zipfile.ZipFile(f'{ZipFiles.__folder_path}reports_and_invoices_{dt_string}.zip', 'w') as f:
             # exclude manifests files (files starting with _) with glob: [!_]
             for file in glob.glob(f'exports/[!_]*'):
                 f.write(file)
-
-    # @staticmethod
-    # def zip_export_invoices():
-    #     dt = datetime.now()
-    #     dt_string = dt.strftime("%d-%m-%Y_%H-%M-%S")
-    #     with zipfile.ZipFile(f'{ZipFiles.__folder_path}invoices_{dt_string}.zip', 'w') as f:
-    #         for file in glob.glob('exports/*.pdf'):
-    #             f.write(file)
-    #
-    # @staticmethod
-    # def zip_export_reports():
-    #     dt = datetime.now()
-    #     dt_string = dt.strftime("%d-%m-%Y_%H-%M-%S")
-    #     with zipfile.ZipFile(f'{ZipFiles.__folder_path}reports_{dt_string}.zip', 'w') as f:
-    #         for file in glob.glob('exports/*.csv'):
-    #             f.write(file)
-    #         for file in glob.glob('exports/*.xlsx'):
-    #             f.write(file)
+        return new_file
 
 
 class Clearing:
@@ -371,4 +422,5 @@ class Clearing:
 # ZipFiles.zip_export_reports()
 # Clearing.delete_files_from_folder(["csv", "pdf", "xlsx"])
 # Clearing.delete_all_zip_from_archive_folder()
+# Export.save_zip_via_browser()
 # Export.save_zip_via_browser()

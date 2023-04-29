@@ -1,6 +1,5 @@
 import re
 from datetime import datetime
-from typing import List, Dict
 import pandas as pd
 from project._collections import Collection
 from project.dataframes import BaseDataframe
@@ -12,13 +11,18 @@ class Transformation:
     def annual_to_monthly_report_df(report_dataframe: pd.DataFrame, datetime_format: str) -> pd.DataFrame:
         correct_input = False
         chosen_month = None
-        while True:
+        min_datetime = report_dataframe['start_time'].iloc[0]
+        min_date_str = str(min_datetime)[:7]
+        max_datetime = report_dataframe['start_time'].iloc[-1]
+        max_date_str = str(max_datetime)[:7]
 
+        while True:
             if correct_input:
                 break
-            chosen_month = input(f"Please chose the Year and the Month (YYYY-MM)\n"
+            chosen_month = input(f"Please chose the Year and the Month (YYYY-MM) "
+                                 f"between '{min_date_str}' and '{max_date_str}' \n"
                                  f"for the monthly reports in a correct format\n"
-                                 f"*'2023-03' for example is March 2023:   ")
+                                 f"*'2023-02' for example is February 2023:   ")
 
             correct_input = re.search(r'(\d{4}-\d{2})', chosen_month.strip())
 

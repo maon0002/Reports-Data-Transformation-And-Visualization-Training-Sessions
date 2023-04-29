@@ -1,5 +1,4 @@
 import os
-from typing import List, Dict
 from InvoiceGenerator.api import Invoice, Item, Client, Provider, Creator
 from InvoiceGenerator.pdf import SimpleInvoice
 from datetime import date
