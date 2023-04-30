@@ -65,7 +65,7 @@ class Transformation:
         # get only the company name and if the training was IN PERSON/LIVE or ONLINE
         df = BaseDataframe.company_subtraction(df)
 
-        # merge/vlookup the columns from limitations_df to the monthly/annual df
+        # merge the columns from limitations_df to the monthly/annual df
         df = pd.merge(
             left=df,
             right=limitations_df,

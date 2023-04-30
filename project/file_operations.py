@@ -2,10 +2,8 @@
 import logging
 from datetime import datetime
 import zipfile
-import glob
-import shutil
 import os
-from typing import List
+from typing import List, Dict
 import numpy as np
 import pandas as pd
 from project.invoices import BaseInvoice
@@ -13,6 +11,8 @@ import tkinter
 from tkinter import filedialog
 from tkinter.filedialog import asksaveasfile
 from project._collections import Collection
+from project.templates import ReportFromTemplate
+import subprocess
 
 
 class Import:
@@ -96,7 +96,7 @@ class Import:
         return report_df
 
     @staticmethod
-    def import_limitations():
+    def import_limitations() -> pd.DataFrame:
         expected_columns = ['COMPANY', 'C_PER_PERSON', 'C_PER_MONTH', 'PREPAID', 'START', 'END', 'DURATION DAYS',
                             'NOTE', 'BGN_PER_HOUR', 'IS_VALID']
         limitations_df = None
@@ -146,31 +146,24 @@ class Export:
     __archive_folder = "archives/"
 
     @staticmethod
-    def df_to_excel(dataframe: pd.DataFrame, name: str, suffix: str) -> None:
-        """
-        Converts the DateFrame with the data and creates a .xlsx file
-        :param suffix:
-        :param dataframe:
-        :param name:
-        :return: nothing
-        """
-        with pd.ExcelWriter(f"{Export.__export_folder}{name}{suffix}.xlsx", engine='xlsxwriter') as ew:
-            dataframe.to_excel(ew, index=False)
-
-    @staticmethod
-    def df_to_csv(dataframe: pd.DataFrame, name: str) -> None:
+    def df_to_csv(name: str, dataframe: pd.DataFrame, path: str) -> None:
         """
         Converts the DateFrame with the data to .csv
+        :param path:
         :param dataframe: transformed from BaseWebsite._data_dict
         :param name: depends on instance name
         :return: nothing
         """
-        dataframe.to_csv(f"{Export.__export_folder}{name}.csv", encoding='utf-8', index=False)
+        dataframe.to_csv(f"{path}{name}.csv", encoding='utf-8', index=False)
 
     @staticmethod
-    def companies_df_to_excel(name: str, dataframe: pd.DataFrame, column_list: List[str] = None):
+    def companies_df_to_excel(name: str, dataframe: pd.DataFrame, path: str) -> None:
         # preparing the new df by company (is_valid == 1) in scope + (is_valid == 0) out of the project scope
-        with pd.ExcelWriter(f'{Export.__export_folder}{name}.xlsx', engine='xlsxwriter') as ew:
+        if name == "Companies":
+            column_list = Collection.company_report_list(dataframe)
+        else:
+            column_list = Collection.company_report_list_other(dataframe)
+        with pd.ExcelWriter(f'{path}{name}.xlsx', engine='xlsxwriter') as ew:
             # add worksheets for the trainings in scope
             for value in column_list:
                 company_filter = (dataframe['company'] == value)
@@ -181,10 +174,24 @@ class Export:
 
                 invoice_data_df = invoice_data_df_init.value_counts()
                 rate_per_hour = float(dataframe.loc[company_filter, 'bgn_per_hour'].unique())
+
                 invoice_data_dict = invoice_data_df.to_dict()
 
                 if invoice_data_dict:
                     BaseInvoice.create_invoice(value, rate_per_hour, invoice_data_dict)
+
+                    new_df = dataframe.loc[company_filter, 'nickname'].value_counts().reset_index(name='count')
+                    start_date = dataframe.loc[company_filter &
+                                               (dataframe['is_valid'] == 1)][['training_datetime']].iloc[0].astype(str)
+                    start_date = str(start_date[0][0:11])
+                    end_date = dataframe.loc[company_filter &
+                                             (dataframe['is_valid'] == 1)][['training_datetime']].iloc[-1].astype(str)
+                    end_date = str(end_date[0][0:11])
+                    total_hours = new_df[['count']].sum().iloc[-1]
+                    ReportFromTemplate.create_by_company_report_from_docx_template(
+                        value, new_df, total_hours, start_date, end_date)
+                    ReportFromTemplate.create_by_company_x_report_from_docx_template(
+                        value, new_df, total_hours, start_date, end_date)
 
                 new_df = dataframe.loc[company_filter, 'nickname'].value_counts().reset_index(name='count')
                 new_df.loc[-1, 'total'] = new_df['count'].sum()
@@ -192,36 +199,45 @@ class Export:
                                 index=False)
 
     @staticmethod
-    def trainers_df_to_excel(name: str, dataframe: pd.DataFrame, column_list: List[str] = None):
-        with pd.ExcelWriter(f'{Export.__export_folder}{name}.xlsx', engine='xlsxwriter') as ew:
+    def trainers_df_to_excel(name: str, dataframe: pd.DataFrame, path: str) -> None:
+        column_list = Collection.trainers_report_list(dataframe)
+        with pd.ExcelWriter(f'{path}{name}.xlsx', engine='xlsxwriter') as ew:
             for value in column_list:
                 new_df = dataframe[(dataframe['trainer'] == value)][
                     ['company', 'training_datetime', 'employee_names', 'short_type', 'bgn_per_hour']]
+
                 # add two columns for totals
-                new_df.loc[-1, 'total_trainings'] = new_df['training_datetime'].count()
-                new_df.loc[-1, 'total_pay'] = str(new_df['bgn_per_hour'].sum()) + ".лв"
+                total_hours = new_df['training_datetime'].count()
+                total_pay = new_df['bgn_per_hour'].sum()
+
+                # make additional report via .docx template
+                ReportFromTemplate.create_by_calendar_report_from_docx_template(value, new_df, total_hours, total_pay)
+
+                new_df.loc[-1, 'total_trainings'] = total_hours
+                new_df.loc[-1, 'total_pay'] = f"{total_pay:.2f}" + ".лв"
+
                 new_df.to_excel(ew, sheet_name=value,
                                 header=['Компания', 'Време на тренинга', 'Имена на служител', 'Вид', 'Лв на час',
                                         'Общо тренинги', 'Общо възнаграждение'], index=False)
 
     @staticmethod
-    def generic_df_to_excel(name: str, df_dict):
-        with pd.ExcelWriter(f'{Export.__export_folder}{name}.xlsx', engine='xlsxwriter') as ew:
-            for item in df_dict.items():
+    def generic_df_to_excel(name: str, dictionary: Dict[str, pd.DataFrame], path: str) -> None:
+        with pd.ExcelWriter(f'{path}{name}.xlsx', engine='xlsxwriter') as ew:
+            for item in dictionary.items():
                 df = item[1]
                 df_name = item[0]
                 if df_name in Collection.generic_report_list():
                     df.to_excel(ew, sheet_name=str(df_name), index=False)
-            month_describe = pd.DataFrame(df_dict["new_monthly_data_df"].describe())
-            annual_describe = pd.DataFrame(df_dict["new_full_data_df"].describe())
+            month_describe = pd.DataFrame(dictionary["new_monthly_data_df"].describe())
+            annual_describe = pd.DataFrame(dictionary["new_full_data_df"].describe())
             month_describe.to_excel(ew, sheet_name='month_describe')
             annual_describe.to_excel(ew, sheet_name='annual_describe')
 
     @staticmethod
-    def stats_mont_df_to_excel(name: str, mont_df: pd.DataFrame):
-        with pd.ExcelWriter(f'{Export.__export_folder}{name}.xlsx', engine='xlsxwriter') as ew:
+    def stats_mont_df_to_excel(name: str, dataframe: pd.DataFrame, path: str) -> None:
+        with pd.ExcelWriter(f'{path}{name}.xlsx', engine='xlsxwriter') as ew:
             # add sheet for statistical monthly data by Employee
-            month_stats_emp = mont_df[['nickname', 'company']] \
+            month_stats_emp = dataframe[['nickname', 'company']] \
                 .value_counts() \
                 .reset_index(name='Trainings per Employee') \
                 .sort_values(by='nickname')
@@ -231,7 +247,7 @@ class Export:
                                      header=['EmployeeID', 'Company', 'trainings', 'Total'],
                                      freeze_panes=(1, 4))
             # add sheet for statistical monthly data by Company
-            month_stats_comp = mont_df[['company', 'nickname', 'concat_emp_company']]
+            month_stats_comp = dataframe[['company', 'nickname', 'concat_emp_company']]
             month_stats_comp_pivot = pd.pivot_table(month_stats_comp,
                                                     index=['company', 'nickname'],
                                                     values=['concat_emp_company'],
@@ -246,7 +262,7 @@ class Export:
                                             header=['trainings'],
                                             freeze_panes=(1, 3))
             # add sheet for statistical monthly data by Trainer
-            month_stats_trainer = mont_df[['trainer', 'nickname', 'concat_emp_company']]
+            month_stats_trainer = dataframe[['trainer', 'nickname', 'concat_emp_company']]
             month_stats_trainer = pd.pivot_table(month_stats_trainer,
                                                  index=['trainer', 'nickname'],
                                                  values=['concat_emp_company'],
@@ -261,7 +277,7 @@ class Export:
                                          header=['trainings'],
                                          freeze_panes=(1, 3))
             # add sheet for statistical monthly data for Company's total
-            month_stats_comp_total = mont_df[['company', 'concat_emp_company', 'bgn_per_hour']]
+            month_stats_comp_total = dataframe[['company', 'concat_emp_company', 'bgn_per_hour']]
             month_stats_comp_total = pd.pivot_table(month_stats_comp_total,
                                                     index=['company'],
                                                     values=['concat_emp_company', 'bgn_per_hour'],
@@ -276,7 +292,7 @@ class Export:
                                             header=['BGN', 'Total trainings'],
                                             freeze_panes=(1, 3))
             # add sheet for statistical monthly data for Trainer's total
-            month_stats_trainer__total = mont_df[['trainer', 'bgn_per_hour', 'is_valid']]
+            month_stats_trainer__total = dataframe[['trainer', 'bgn_per_hour', 'is_valid']]
             month_stats_trainer__total = pd.pivot_table(month_stats_trainer__total,
                                                         index=['trainer'],
                                                         values=['trainer', 'bgn_per_hour'],
@@ -292,12 +308,12 @@ class Export:
                                                 freeze_panes=(1, 3))
 
     @staticmethod
-    def stats_full_df_to_excel(name: str, full_df: pd.DataFrame):
-        with pd.ExcelWriter(f'{Export.__export_folder}{name}.xlsx', engine='xlsxwriter') as ew:
+    def stats_full_df_to_excel(name: str, dataframe: pd.DataFrame, path: str) -> None:
+        with pd.ExcelWriter(f'{path}{name}.xlsx', engine='xlsxwriter') as ew:
             # add sheet for statistical annual data by Company with percentage
             # filter_for_actual_contracts_y = (full_df['is_valid'] == 1)
-            annual_stats_general1 = full_df[['company']].value_counts().reset_index()
-            annual_stats_general2 = (full_df[['company']].
+            annual_stats_general1 = dataframe[['company']].value_counts().reset_index()
+            annual_stats_general2 = (dataframe[['company']].
                                      value_counts(normalize=True).mul(100).round(2).astype(str) + '%').reset_index()
             annual_stats_general = pd.merge(
                 left=annual_stats_general1,
@@ -311,7 +327,7 @@ class Export:
                                           freeze_panes=(1, 3)
                                           )
             # add sheet for statistical annual data by Company and Year
-            annual_stats_by_year = full_df[['company', 'year']]
+            annual_stats_by_year = dataframe[['company', 'year']]
             annual_stats_by_year = annual_stats_by_year.value_counts(['company', 'year']).unstack()
             annual_stats_by_year['Total'] = annual_stats_by_year.agg("sum", axis='columns')
             annual_stats_by_year.loc[-1, 'Grand Total'] = annual_stats_by_year['Total'].sum()
@@ -320,7 +336,7 @@ class Export:
                                           index_label=['Company'],
                                           freeze_panes=(1, 6))
             # add sheet for statistical annual data by Unique EmployeeIDs with percentage
-            annual_stats_unique_emp0 = full_df[['company', 'nickname']].value_counts().to_frame().reset_index()
+            annual_stats_unique_emp0 = dataframe[['company', 'nickname']].value_counts().to_frame().reset_index()
             annual_stats_unique_emp1 = annual_stats_unique_emp0[['company']].value_counts().to_frame().reset_index()
             annual_stats_unique_emp2 = (annual_stats_unique_emp0[['company']].
                                         value_counts(normalize=True).mul(100).round(2).astype(str) + '%').reset_index()
@@ -335,7 +351,7 @@ class Export:
                                              header=['Company', 'Total trainings', '%Percentage'],
                                              freeze_panes=(1, 3))
             # add sheet for statistical annual data by Employee, by Year
-            annual_stats_by_emp_by_year = full_df[['company', 'nickname', 'year']]
+            annual_stats_by_emp_by_year = dataframe[['company', 'nickname', 'year']]
             annual_stats_by_emp_by_year = annual_stats_by_emp_by_year.value_counts(['company', 'nickname', 'year']) \
                 .unstack()
             annual_stats_by_emp_by_year['Total'] = annual_stats_by_emp_by_year.agg("sum", axis='columns')
@@ -345,8 +361,8 @@ class Export:
                                                  index_label=['Company', 'EmployeeID'],
                                                  freeze_panes=(1, 7))
             # add sheet for statistical annual data by Company and Employees with only 1 training
-            annual_stats_by_emp_with_one_training = full_df[
-                (full_df['returns_or_not'] == 'only one session')].reset_index()
+            annual_stats_by_emp_with_one_training = dataframe[
+                (dataframe['returns_or_not'] == 'only one session')].reset_index()
             annual_stats_by_emp_with_one_training = pd.DataFrame(
                 annual_stats_by_emp_with_one_training[['company', 'nickname']].value_counts().to_frame())
             annual_stats_by_emp_with_one_training.loc[-1, 'Grand Total'] = annual_stats_by_emp_with_one_training[
@@ -358,20 +374,28 @@ class Export:
                                                            freeze_panes=(1, 4))
 
     @staticmethod
-    def save_zip_via_browser() -> str:
-        tkinter.Tk().withdraw()  # prevents an empty tkinter window from appearing
-        target_path = asksaveasfile(filetypes=[("Zip archive", ".zip")],
-                                    defaultextension=".zip",
-                                    initialfile="all_data.zip",
-                                    title='Save all data/reports as Zip file')
-        original_file = os.listdir(Export.__archive_folder)[0]
-        original_path = fr'{Export.__archive_folder}{original_file}'
-        if target_path:
-            shutil.copyfile(original_path, target_path.name)
-        else:
-            print("Please select where to save the reports '.zip' file")
-            Export.save_zip_via_browser()
-        return target_path
+    def convert_docx_to_pdf(files_path) -> None:
+        # path to the engine
+        path_to_office = r"C:\Program Files\LibreOffice\program\soffice.exe"
+        # verify the path using getcwd()
+        cwd = os.getcwd()
+        files = os.listdir(files_path)
+        for file in files:
+            if os.path.isfile(files_path + "/" + file):
+                # path with files to convert
+                source_folder = fr"{files_path}"
+
+                # path with pdf files
+                output_folder = fr"PDFs"
+                # output_folder = fr"{output_folder_path}"
+
+                # changing directory to source
+                os.chdir(source_folder)
+
+                # assign and running the command of converting files through LibreOffice
+                command = f"\"{path_to_office}\" --convert-to pdf  --outdir \"{output_folder}\" *.*"
+                subprocess.run(command)
+        os.chdir(cwd)
 
 
 class ZipFiles:
@@ -382,45 +406,55 @@ class ZipFiles:
         dt = datetime.now()
         dt_string = dt.strftime("%d-%m-%Y_%H-%M-%S")
         new_file = f"reports_and_invoices_{dt_string}.zip"
-        tkinter.Tk().withdraw()  # prevents an empty tkinter window from appearing
-        target_dir_path = asksaveasfile(filetypes=[("Zip archive file", ".zip")],
-                                        defaultextension=".zip",
-                                        initialfile=f"{new_file}",
-                                        title='Save all data/reports as Zip file')
 
-        save_as = target_dir_path.name
-        with zipfile.ZipFile(f'{save_as}', 'w') as f:
-            # exclude manifests files (files starting with _) with glob: [!_]
-            for file in glob.glob(f'exports/[!_]*'):
-                f.write(file)
+        while True:
+            tkinter.Tk().withdraw()  # prevents an empty tkinter window from appearing
+            target_dir_path = asksaveasfile(filetypes=[("Zip archive file", ".zip")],
+                                            defaultextension=".zip",
+                                            initialfile=f"{new_file}",
+                                            title='Save all data/reports as Zip file')
+            if not target_dir_path:
+                print("Please select folder for the output .zip file!")
+                continue
+            save_as = target_dir_path.name
+            with zipfile.ZipFile(f'{save_as}', 'w') as f:
+                for root, dirs, files in os.walk("exports"):
+                    for file in files:
+                        f.write(os.path.join(root, file))
+                    for directory in dirs:
+                        f.write(os.path.join(root, directory))
+            break
         return new_file
 
 
 class Clearing:
 
     @staticmethod
-    def delete_files_from_folder(extensions: list):
-        # Search files with .txt extension in current directory
-        for ext in extensions:
-            pdf_pattern = f"exports/*.{ext}"
-            files = glob.glob(pdf_pattern)
-            # deleting the files with listed as argument extensions
-            for file in files:
-                os.remove(file)
+    def list_files(folder_relative_path) -> List[str]:
+        items_list = []
+        for root, dirs, files in os.walk(folder_relative_path, topdown=False):
+            for name in files:
+                items_list.append(os.path.join(root, name))
+            for name in dirs:
+                items_list.append(os.path.join(root, name))
+        return items_list
 
     @staticmethod
-    def delete_all_zip_from_archive_folder():
-        # Search files with .txt extension in current directory
-        pdf_pattern = f"archives/*.zip"
-        files = glob.glob(pdf_pattern)
-        # deleting the files with zip extension
-        for file in files:
-            os.remove(file)
+    def delete_files_from_export_subfolders():
+        clearing_list = Clearing.list_files("exports")
 
-# ZipFiles.zip_export_folder()
-# ZipFiles.zip_export_invoices()
-# ZipFiles.zip_export_reports()
-# Clearing.delete_files_from_folder(["csv", "pdf", "xlsx"])
-# Clearing.delete_all_zip_from_archive_folder()
-# Export.save_zip_via_browser()
-# Export.save_zip_via_browser()
+        for item in clearing_list:
+            if os.path.isfile(item):
+                # print(item, "was removed")
+                os.remove(item)
+
+
+class Create:
+
+    @staticmethod
+    def create_folder(name: str, parent: str):
+        directory = name
+        parent_directory = parent + "/"
+        path = os.path.join(parent_directory, directory)
+        os.mkdir(path)
+        logging.info("Directory '% s' created" % directory)

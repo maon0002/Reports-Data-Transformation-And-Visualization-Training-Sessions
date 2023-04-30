@@ -172,21 +172,17 @@ class Collection:
             'status'
         ]]
 
-    @staticmethod
-    def trainers_columns() -> List[str]:
-        return [
-            'type',
-            'trainer',
-            'company',
-            'employee_names',
-            'training_datetime',
-            'short_type',
-            'status'
-        ]
-
-    @staticmethod
-    def raw_report_list() -> List[str]:
-        return ['new_monthly_data_df', 'new_full_data_df', 'limitations', 'flags_data']
+    # @staticmethod
+    # def trainers_columns() -> List[str]:
+    #     return [
+    #         'type',
+    #         'trainer',
+    #         'company',
+    #         'employee_names',
+    #         'training_datetime',
+    #         'short_type',
+    #         'status'
+    #     ]
 
     @staticmethod
     def generic_report_list() -> List[str]:

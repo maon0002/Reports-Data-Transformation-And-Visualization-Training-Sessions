@@ -5,7 +5,13 @@ from datetime import date
 
 
 class BaseInvoice:
-    __invoice_next_seq_file = "invoice_next_seq.txt"
+    @staticmethod
+    def invoice_seq_file():
+        return "imports/invoice_next_seq.txt"
+
+    @staticmethod
+    def invoice_filepath():
+        return "exports/invoices/"
 
     @staticmethod
     def get_invoice_number() -> str:
@@ -13,8 +19,7 @@ class BaseInvoice:
         It gets a number from a .txt file, adds 1 to be ready for the next invoice seq number
         :return: seq number as a string to be used as invoice number (for example 1111111112)
         """
-        seq_file = f"imports/{BaseInvoice.__invoice_next_seq_file}"
-        invoice_current_number = 0
+        seq_file = BaseInvoice.invoice_seq_file()
         f = open(seq_file, "r+")
         value = f.readline()
         invoice_current_number = value
@@ -50,7 +55,7 @@ class BaseInvoice:
         """
         os.environ["INVOICE_LANG"] = "en"
         client = Client(recipient)
-        provider = Provider(summary='CouchMe', address='Couching str. 55A', zip_code='1000', city='Indore',
+        provider = Provider(summary='CouchMe', address='Couching str. 55A', zip_code='1000', city='Sofia',
                             country='Bulgaria', bank_name='KBC Bank', bank_code='BGSFKBC',
                             bank_account='KBC000SF999888',
                             phone='+35987654321', email='couchme@mail.com', logo_filename='images/logo.webp')
@@ -59,7 +64,18 @@ class BaseInvoice:
         invoice.date = date.today()
         invoice.currency_locale = 'bg_BG.UTF-8'
         invoice.currency = 'BGN'
+
         invoice.number = BaseInvoice.get_invoice_number()
+
+        # or use manual input
+        # invoice.number = 0
+        # while True:
+        #     invoice_number = input("Please enter the initial invoice number: ")
+        #     invoice_number = invoice_number.strip()
+        #     if invoice_number.isdigit() and len(invoice_number) == 10:
+        #         invoice.number = invoice_number
+        #         break
+
         invoice.use_tax = True
         for data in data_dict.items():
             nickname = data[0][0]
@@ -69,4 +85,5 @@ class BaseInvoice:
             description = f"Employee: {nickname} for >>> '{service}'"
             invoice.add_item(Item(units, price_per_unit, description=description, tax=15))
         document = SimpleInvoice(invoice)
-        document.gen(f"exports/invoice_{recipient}.pdf")
+        invoice_path = BaseInvoice.invoice_filepath()
+        document.gen(f"{invoice_path}invoice_{recipient}.pdf")
