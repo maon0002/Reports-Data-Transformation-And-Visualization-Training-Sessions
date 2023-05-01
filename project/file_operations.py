@@ -16,28 +16,50 @@ import subprocess
 
 
 class Import:
+    """Class used to provide functions related to the file importing
 
-    @staticmethod
-    def show_first_ten_rows(path) -> pd.DataFrame:
-        """
-        Uses a DataFrame to show first 10 rows from it
-        :return:
-        """
-        df = pd.read_csv(path)
-        return df.head(10)
+        Attributes
+        ----------
+        No attributes
+
+        Methods
+        -------
+        to_lower(x):
+            Used as a function for the email series/column to lowercase tha values during the import.
+            * 'Email' and 'Служебен имейл | Work email  '
+
+        import_report() -> pd.DataFrame:
+            Import the general/initial report from the platform for reservations/booking
+            and create a dataframe with the full data for further transformations and validation
+
+        import_limitations() -> pd.DataFrame:
+            Import the limitation report that contains company contracts data, payment rate per hour etc.
+            and create a dataframe
+
+    """
 
     @staticmethod
     def to_lower(x):
+        """
+        Used as a function for the email series/column to lowercase tha values during the import.
+        * 'Email' and 'Служебен имейл | Work email  '
+
+        :param x:
+        :return:
+        """
         return x.lower() if isinstance(x, str) else x
 
     @staticmethod
     def import_report() -> pd.DataFrame:
-        expected_columns = ['Start Time', 'End Time', 'First Name', 'Last Name', 'Phone', 'Email', 'Type', 'Calendar',
-                            'Appointment Price', 'Paid?', 'Amount Paid Online', 'Certificate Code', 'Notes',
-                            'Date Scheduled', 'Label', 'Scheduled By',
-                            'Име на компанията, в която работите | Name of the company you work for  ',
-                            'Служебен имейл | Work email  ', 'Предпочитани платформи | Preferred platforms  ',
-                            'Appointment ID']
+        """
+        Import the general/initial report from the platform for reservations/booking
+        and create a dataframe with the full data for further transformations and validation
+
+        :return: dataframe 'report_df'
+        """
+
+        # uses file explorer browser to find and select the
+        # general/initial report and validate the chose
         report_df = None
         while True:
             tkinter.Tk().withdraw()  # prevents an empty tkinter window from appearing
@@ -49,9 +71,12 @@ class Import:
                 print(f"Please choose the .csv file with the General report!")
                 continue
 
+            # check for the consistency of the columns comparing them with a list from _collections
             columns_in_selected_file = pd.read_csv(file_path).columns
-            column_inconsistency_check = [x for x in zip(expected_columns, columns_in_selected_file) if x[0] != x[1]]
+            column_inconsistency_check = [x for x in zip(Collection.report_expected_columns(), columns_in_selected_file)
+                                          if x[0] != x[1]]
 
+            # print and log the inconsistencies
             if column_inconsistency_check:
                 print(column_inconsistency_check, sep="\n")
                 message = [">>> The following columns are not matching expected order/names: "]
@@ -64,7 +89,11 @@ class Import:
 
                 print(f"Please check the column's consistency in the chosen file!\n",
                       '\n'.join(message))
+                logging.info(f"Column inconsistencies for the reservations report:\n", '\n'.join(message))
                 continue
+
+            # if choice is valid and there are no inconsistencies
+            # import and transform the report data to a dataframe
             else:
                 report_df = pd.read_csv(file_path,
                                         parse_dates=['Start Time',
@@ -92,13 +121,20 @@ class Import:
                                             'Email': Import.to_lower,
                                             'Служебен имейл | Work email  ': Import.to_lower}, ) \
                     .fillna(np.nan).replace([np.nan], [None])
+                logging.info(f"General/initial report file imported successfully and "
+                             f"limitations_df dataframe was created")
                 break
         return report_df
 
     @staticmethod
     def import_limitations() -> pd.DataFrame:
-        expected_columns = ['COMPANY', 'C_PER_PERSON', 'C_PER_MONTH', 'PREPAID', 'START', 'END', 'DURATION DAYS',
-                            'NOTE', 'BGN_PER_HOUR', 'IS_VALID']
+        """
+        Import the limitation report that contains company contracts data, payment rate per hour etc.
+        and create a dataframe
+        :return: dataframe 'limitations_df'
+        """
+        # uses file explorer browser to find and select the
+        # limitations.csv and validate the chose
         limitations_df = None
         while True:
             tkinter.Tk().withdraw()  # prevents an empty tkinter window from appearing
@@ -110,9 +146,14 @@ class Import:
                 print(f"Please choose the .csv file with the predefined Limitations!")
                 continue
 
+            # check for the consistency of the columns comparing them with a list from _collections
             columns_in_selected_file = pd.read_csv(file_path).columns
-            column_inconsistency_check = [x for x in zip(expected_columns, columns_in_selected_file) if x[0] != x[1]]
+            column_inconsistency_check = [x for x in zip(Collection.limitations_expected_columns(),
+                                                         columns_in_selected_file) if x[0] != x[1]]
+
+            # print and log the inconsistencies
             if column_inconsistency_check:
+
                 print(column_inconsistency_check, sep="\n")
                 message = [">>> The following columns are not matching expected order/names: "]
                 for items in column_inconsistency_check:
@@ -124,7 +165,11 @@ class Import:
 
                 print(f"Please check the column's consistency in the chosen file!\n",
                       '\n'.join(message))
+                logging.info(f"Column inconsistencies for the limitations report:\n", '\n'.join(message))
                 continue
+
+            # if choice is valid and there are no inconsistencies
+            # import and transform the report data to a dataframe
             else:
                 limitations_df = pd.read_csv(file_path,
                                              names=['company', 'c_per_emp', 'c_per_month', 'prepaid',
@@ -137,13 +182,46 @@ class Import:
                                              index_col=False,
                                              keep_default_na=False,
                                              )
+                logging.info(f"Limitations file imported successfully and limitations_df dataframe was created")
                 break
         return limitations_df
 
 
 class Export:
-    __export_folder = "exports/"
-    __archive_folder = "archives/"
+    """Class used to provide functions related to the file importing
+
+        Attributes
+        ----------
+        No attributes
+
+        Methods
+        -------
+        df_to_csv(name: str, dataframe: pd.DataFrame, path: str) -> None:
+            Converts the DateFrame with the data to .csv
+
+        companies_df_to_excel(name: str, dataframe: pd.DataFrame, path: str) -> None:
+            Takes data from the new monthly dataframe, filters by each company
+            and export them in separate sheets, also creates an invoice and an additional reports
+            based on a pre-formatted .docx file
+
+        trainers_df_to_excel(name: str, dataframe: pd.DataFrame, path: str) -> None:
+            Takes data from the new monthly dataframe, filters by each trainer
+            and export them in separate sheets, also creates additional reports
+            based on a pre-formatted .docx file
+
+        generic_df_to_excel(name: str, dictionary: Dict[str, pd.DataFrame], path: str) -> None:
+            ...
+
+        stats_mont_df_to_excel(name: str, dataframe: pd.DataFrame, path: str) -> None:
+            ...
+
+        stats_full_df_to_excel(name: str, dataframe: pd.DataFrame, path: str) -> None:
+            ...
+
+        convert_docx_to_pdf(files_path) -> None:
+            ...
+
+    """
 
     @staticmethod
     def df_to_csv(name: str, dataframe: pd.DataFrame, path: str) -> None:
@@ -158,6 +236,16 @@ class Export:
 
     @staticmethod
     def companies_df_to_excel(name: str, dataframe: pd.DataFrame, path: str) -> None:
+        """
+        Takes data from the new monthly dataframe, filters by each company
+        and export them in separate sheets, also creates an invoice and an additional reports
+        based on a pre-formatted .docx file
+
+        :param name: 'Companies' or 'Companies_out_of_scope'
+        :param dataframe: new_monthly_data_df
+        :param path: relative path where the file must be saved
+        :return: None
+        """
         # preparing the new df by company (is_valid == 1) in scope + (is_valid == 0) out of the project scope
         if name == "Companies":
             column_list = Collection.company_report_list(dataframe)
@@ -178,8 +266,10 @@ class Export:
                 invoice_data_dict = invoice_data_df.to_dict()
 
                 if invoice_data_dict:
+                    # make an invoice for the company
                     BaseInvoice.create_invoice(value, rate_per_hour, invoice_data_dict)
 
+                    # add variables to give the needed inf for creation of the .docx templates
                     new_df = dataframe.loc[company_filter, 'nickname'].value_counts().reset_index(name='count')
                     start_date = dataframe.loc[company_filter &
                                                (dataframe['is_valid'] == 1)][['training_datetime']].iloc[0].astype(str)
@@ -188,19 +278,38 @@ class Export:
                                              (dataframe['is_valid'] == 1)][['training_datetime']].iloc[-1].astype(str)
                     end_date = str(end_date[0][0:11])
                     total_hours = new_df[['count']].sum().iloc[-1]
+
+                    # create the .docx templates with the company data
                     ReportFromTemplate.create_by_company_report_from_docx_template(
                         value, new_df, total_hours, start_date, end_date)
                     ReportFromTemplate.create_by_company_x_report_from_docx_template(
                         value, new_df, total_hours, start_date, end_date)
 
+                # aggregate the company data, add 'count' and 'total' columns
                 new_df = dataframe.loc[company_filter, 'nickname'].value_counts().reset_index(name='count')
                 new_df.loc[-1, 'total'] = new_df['count'].sum()
+
+                # export/ save the dataframe to excel as sheet with company name as a sheet name
                 new_df.to_excel(ew, sheet_name=value, header=['Employee ID', 'Bookings', 'Total'],
                                 index=False)
 
     @staticmethod
     def trainers_df_to_excel(name: str, dataframe: pd.DataFrame, path: str) -> None:
+        """
+        Takes data from the new monthly dataframe, filters by each trainer
+        and export them in separate sheets, also creates additional reports
+        based on a pre-formatted .docx file
+
+        :param name: the name for the .excel file
+        :param dataframe: new_monthly_data_df
+        :param path: relative path where the file must be saved
+        :return: None
+        """
+
+        # take the unique values in the 'trainer' pd.Series (trainers names*)
         column_list = Collection.trainers_report_list(dataframe)
+
+        # use the manager for the .xlsx file building and saving
         with pd.ExcelWriter(f'{path}{name}.xlsx', engine='xlsxwriter') as ew:
             for value in column_list:
                 new_df = dataframe[(dataframe['trainer'] == value)][
@@ -216,12 +325,20 @@ class Export:
                 new_df.loc[-1, 'total_trainings'] = total_hours
                 new_df.loc[-1, 'total_pay'] = f"{total_pay:.2f}" + ".лв"
 
+                # export/ save the dataframe to excel as sheet with trainer name as a sheet name
                 new_df.to_excel(ew, sheet_name=value,
                                 header=['Компания', 'Време на тренинга', 'Имена на служител', 'Вид', 'Лв на час',
                                         'Общо тренинги', 'Общо възнаграждение'], index=False)
 
     @staticmethod
     def generic_df_to_excel(name: str, dictionary: Dict[str, pd.DataFrame], path: str) -> None:
+        """
+
+        :param name:
+        :param dictionary:
+        :param path:
+        :return:
+        """
         with pd.ExcelWriter(f'{path}{name}.xlsx', engine='xlsxwriter') as ew:
             for item in dictionary.items():
                 df = item[1]

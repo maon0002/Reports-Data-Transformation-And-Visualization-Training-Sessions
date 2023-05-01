@@ -1,6 +1,5 @@
 # coding: utf8
 import gc
-import time
 from abc import ABC, abstractmethod
 from typing import Dict
 import pandas as pd
@@ -29,7 +28,7 @@ class BaseReport(ABC):
 
     Methods
     -------
-    build_report_base():
+    build_report_base() -> Dict[str, pd.DataFrame]:
         Imports two standard files from the local PC which are
         needed fundament/base for the further data validation/transformation
         and returns dataframes objects for different reporting purposes
@@ -115,7 +114,7 @@ class Report(BaseReport):
 
     def export_report(self):
         """
-        Find and execute the right function for this class object
+        Find the needed dataframe and execute the right function for this class object
         """
         function = self.get_function_by_name()
         df_obj = self.get_dataframe_obj()
@@ -192,8 +191,10 @@ class MultiReport(BaseReport):
 # Remove all files in the 'exports' folder and sub-folders saved during previous runs
 Clearing.delete_files_from_export_subfolders()
 
+# Get a dictionary with the based on the imported initial report dataframes
 dataframes_dictionary = BaseReport.build_report_base()
 
+# Create all report instances
 raw_full = Report("Raw_Full", "exports/for_reference/", "df_to_csv", "full_raw_report_df")
 raw_mont = Report("Raw_Mont", "exports/for_reference/", "df_to_csv", "monthly_raw_report_df")
 new_full = Report("New_Full", "exports/for_reference/", "df_to_csv", "new_full_data_df")
@@ -208,8 +209,10 @@ by_calendar = BulkReport("by_calendar", "exports/from_templates/by_calendar", "c
 by_company = BulkReport("by_company", "exports/from_templates/by_company", "convert_docx_to_pdf")
 by_company_x = BulkReport("by_company_x", "exports/from_templates/by_company_x", "convert_docx_to_pdf")
 
+# Get a list of all report instances and initiate progress tracking
 report_instances = [r for r in gc.get_objects() if isinstance(r, BaseReport)]
 for i in tqdm(range(len(report_instances))):
     report_instances[i].export_report()
 
+# Zip all files and folders in 'exports' folder
 ZipFiles.zip_export_folder()

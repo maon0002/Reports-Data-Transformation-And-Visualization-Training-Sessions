@@ -5,19 +5,52 @@ from datetime import date
 
 
 class BaseInvoice:
+    """Class used to provide functions for the invoice generation
+
+            Attributes
+            ----------
+            No attributes
+
+            Methods
+            -------
+            invoice_seq_file():
+                Returns the relative path where the next invoice sequence number is kept
+
+            invoice_filepath():
+                Returns the relative path for the invoice export folder
+
+            get_invoice_number():
+                It gets a number from a .txt file,
+                adds 1 to be ready for the next invoice seq number
+
+            update_invoice_number(path, new_number) -> None:
+                Clear the file with the previous invoice number
+                and replaced it with a new number (old number + 1)
+
+            create_invoice(recipient: str, price: float, data_dict: dict) -> None:
+                During the data aggregation for the .xlsx reports for each company, this function generates an invoice on a
+                employee/service level
+    """
+
     @staticmethod
     def invoice_seq_file():
+        """
+        :return: the relative path where the next invoice sequence number is kept
+        """
         return "imports/invoice_next_seq.txt"
 
     @staticmethod
     def invoice_filepath():
+        """
+        :return: the relative path for the invoice export folder
+        """
         return "exports/invoices/"
 
     @staticmethod
     def get_invoice_number() -> str:
         """
         It gets a number from a .txt file, adds 1 to be ready for the next invoice seq number
-        :return: seq number as a string to be used as invoice number (for example 1111111112)
+        :return: seq number as a string to be used as invoice number (for example 1111112345)
         """
         seq_file = BaseInvoice.invoice_seq_file()
         f = open(seq_file, "r+")
@@ -53,18 +86,27 @@ class BaseInvoice:
         example: {('TORADGRA', 'QuantumPeak:Тренинг за лидери на живо | Leadership training in person'): 1}
         :return: nothing
         """
+        # setup language
         os.environ["INVOICE_LANG"] = "en"
+        # create objects for the invoice creation
         client = Client(recipient)
         provider = Provider(summary='CouchMe', address='Couching str. 55A', zip_code='1000', city='Sofia',
                             country='Bulgaria', bank_name='KBC Bank', bank_code='BGSFKBC',
                             bank_account='KBC000SF999888',
                             phone='+35987654321', email='couchme@mail.com', logo_filename='images/logo.webp')
         creator = Creator('CouchMe EOOD')
+
+        # create invoice object
         invoice = Invoice(client, provider, creator)
+
+        # get the today's date
         invoice.date = date.today()
+
+        # set the regional settings and currency
         invoice.currency_locale = 'bg_BG.UTF-8'
         invoice.currency = 'BGN'
 
+        # a way to use a number for the invoices (alternative right after)
         invoice.number = BaseInvoice.get_invoice_number()
 
         # or use manual input
@@ -77,6 +119,8 @@ class BaseInvoice:
         #         break
 
         invoice.use_tax = True
+
+        # add invoice rows with the data
         for data in data_dict.items():
             nickname = data[0][0]
             service = data[0][1]
@@ -84,6 +128,12 @@ class BaseInvoice:
             price_per_unit = price
             description = f"Employee: {nickname} for >>> '{service}'"
             invoice.add_item(Item(units, price_per_unit, description=description, tax=15))
+
+        # define and create the invoice type
         document = SimpleInvoice(invoice)
+
+        # get the invoice default relative path
         invoice_path = BaseInvoice.invoice_filepath()
+
+        # generate an invoice
         document.gen(f"{invoice_path}invoice_{recipient}.pdf")

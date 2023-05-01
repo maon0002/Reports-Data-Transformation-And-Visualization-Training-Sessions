@@ -5,16 +5,34 @@ import pandas as pd
 class Collection:
 
     @staticmethod
+    def report_expected_columns():
+        return ['Start Time', 'End Time', 'First Name', 'Last Name', 'Phone', 'Email', 'Type', 'Calendar',
+                'Appointment Price', 'Paid?', 'Amount Paid Online', 'Certificate Code', 'Notes',
+                'Date Scheduled', 'Label', 'Scheduled By',
+                'Име на компанията, в която работите | Name of the company you work for  ',
+                'Служебен имейл | Work email  ', 'Предпочитани платформи | Preferred platforms  ',
+                'Appointment ID']
+
+    @staticmethod
+    def limitations_expected_columns():
+        return ['COMPANY', 'C_PER_PERSON', 'C_PER_MONTH', 'PREPAID', 'START', 'END', 'DURATION DAYS',
+                'NOTE', 'BGN_PER_HOUR', 'IS_VALID']
+
+
+    @staticmethod
     def date_default_format():
         return "%d-%b-%Y"
+
 
     @staticmethod
     def datetime_default_format():
         return "%d-%b-%Y %H:%M:%S"
 
+
     @staticmethod
     def datetime_final_format():
         return "%Y-%m-%d %H:%M:%S"
+
 
     @staticmethod
     def flags_dict() -> dict:
@@ -32,9 +50,9 @@ class Collection:
                  'number of the trainings left less than 1'
                  ]}
 
+
     @staticmethod
     def transliterate_bg_to_en(df: pd.DataFrame, column: str, new_column: str) -> pd.Series:
-
         """
         Transliterate bg chars into latin when needed
         """
@@ -122,6 +140,7 @@ class Collection:
                 df.loc[i, new_column] = df.loc[i, column].upper()
         return df[new_column]
 
+
     @staticmethod
     def new_data_columns() -> List[str]:
         return [
@@ -149,6 +168,7 @@ class Collection:
             'is_valid'
         ]
 
+
     @staticmethod
     def trainings_columns() -> List[List[str]]:
         return [[
@@ -172,6 +192,7 @@ class Collection:
             'status'
         ]]
 
+
     # @staticmethod
     # def trainers_columns() -> List[str]:
     #     return [
@@ -194,16 +215,19 @@ class Collection:
             "limitations_df",
             "flags_data_df"]
 
+
     @staticmethod
     def company_report_list(new_monthly_data_df) -> List[str]:
         # list the companies with is_valid == 1
         return [comp for comp in new_monthly_data_df[(new_monthly_data_df['is_valid'] == 1)]['company'].unique()]
 
+
     @staticmethod
     def company_report_list_other(new_monthly_data_df) -> List[str]:
         # list the companies with is_valid == 1
         return [comp_other for comp_other in new_monthly_data_df[(new_monthly_data_df['is_valid'] == 0)]['company']
-                .unique()]
+            .unique()]
+
 
     @staticmethod
     def trainers_report_list(monthly_data: pd.DataFrame) -> List[str]:
