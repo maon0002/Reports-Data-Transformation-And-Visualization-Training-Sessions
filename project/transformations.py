@@ -92,8 +92,8 @@ class Transformation:
         df = BaseDataframe.trim_all_columns(df)
 
         # transliteration of the employee names from cyrillic to latin chars
-        df["first_name"] = Collection.transliterate_bg_to_en(df, "f_name", "first_name")
-        df["last_name"] = Collection.transliterate_bg_to_en(df, "l_name", "last_name")
+        df["first_name"] = BaseDataframe.transliterate_bg_to_en(df, "f_name", "first_name")
+        df["last_name"] = BaseDataframe.transliterate_bg_to_en(df, "l_name", "last_name")
 
         # using first, last name and email parts
         df = BaseDataframe.nickname(df)

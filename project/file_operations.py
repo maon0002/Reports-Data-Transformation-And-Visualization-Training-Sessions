@@ -70,7 +70,7 @@ class Import:
             if not file_path:
                 print(f"Please choose the .csv file with the General report!")
                 continue
-
+            logging.info(f"The user select the following path: '{file_path}' for initial report importing")
             # check for the consistency of the columns comparing them with a list from _collections
             columns_in_selected_file = pd.read_csv(file_path).columns
             column_inconsistency_check = [x for x in zip(Collection.report_expected_columns(), columns_in_selected_file)
@@ -89,7 +89,7 @@ class Import:
 
                 print(f"Please check the column's consistency in the chosen file!\n",
                       '\n'.join(message))
-                logging.info(f"Column inconsistencies for the reservations report:\n", '\n'.join(message))
+                logging.info(f"***Column inconsistencies for the reservations report:\n", '\n'.join(message))
                 continue
 
             # if choice is valid and there are no inconsistencies
@@ -146,6 +146,8 @@ class Import:
                 print(f"Please choose the .csv file with the predefined Limitations!")
                 continue
 
+            logging.info(f"The user select the following path: '{file_path}' for limitations importing")
+
             # check for the consistency of the columns comparing them with a list from _collections
             columns_in_selected_file = pd.read_csv(file_path).columns
             column_inconsistency_check = [x for x in zip(Collection.limitations_expected_columns(),
@@ -165,7 +167,7 @@ class Import:
 
                 print(f"Please check the column's consistency in the chosen file!\n",
                       '\n'.join(message))
-                logging.info(f"Column inconsistencies for the limitations report:\n", '\n'.join(message))
+                logging.info(f"***Column inconsistencies for the limitations report:\n", '\n'.join(message))
                 continue
 
             # if choice is valid and there are no inconsistencies
@@ -210,16 +212,30 @@ class Export:
             based on a pre-formatted .docx file
 
         generic_df_to_excel(name: str, dictionary: Dict[str, pd.DataFrame], path: str) -> None:
-            ...
+            Creates one file with multiple dataframes in separate sheets in case of data review
+            Serves class MultiReport
 
         stats_mont_df_to_excel(name: str, dataframe: pd.DataFrame, path: str) -> None:
-            ...
+            Uses the monthly dataframe to aggregate/pivot the data by:
+             - employee
+             - company
+             - trainer
+             - company total
+             - trainer total
+             and save every dataframe as a separate sheet
 
         stats_full_df_to_excel(name: str, dataframe: pd.DataFrame, path: str) -> None:
-            ...
+            Uses the full/annual dataframe to aggregate/pivot the data by:
+             - employee
+             - company
+             - trainer
+             - company total
+             - trainer total
+             and save every dataframe as a separate sheet
 
         convert_docx_to_pdf(files_path) -> None:
-            ...
+            Uses LibreOffice to convert the generated .docx reports to PDF
+            Serves to class BulkReport
 
     """
 
@@ -240,6 +256,7 @@ class Export:
         Takes data from the new monthly dataframe, filters by each company
         and export them in separate sheets, also creates an invoice and an additional reports
         based on a pre-formatted .docx file
+        Serves class Report.
 
         :param name: 'Companies' or 'Companies_out_of_scope'
         :param dataframe: new_monthly_data_df
@@ -298,7 +315,8 @@ class Export:
         """
         Takes data from the new monthly dataframe, filters by each trainer
         and export them in separate sheets, also creates additional reports
-        based on a pre-formatted .docx file
+        based on a pre-formatted .docx file.
+        Serves class Report.
 
         :param name: the name for the .excel file
         :param dataframe: new_monthly_data_df
@@ -333,12 +351,16 @@ class Export:
     @staticmethod
     def generic_df_to_excel(name: str, dictionary: Dict[str, pd.DataFrame], path: str) -> None:
         """
+        Creates one file with multiple dataframes in separate sheets in case of data review
+        Serves class MultiReport
 
-        :param name:
-        :param dictionary:
-        :param path:
-        :return:
+        :param name: the name for the .excel file
+        :param dictionary: dictionary with the dataframes which will be saved as separate excel sheets
+        :param path: relative path where the file must be saved
+        :return: None
         """
+
+        # use the manager for the .xlsx file building and saving
         with pd.ExcelWriter(f'{path}{name}.xlsx', engine='xlsxwriter') as ew:
             for item in dictionary.items():
                 df = item[1]
@@ -352,6 +374,22 @@ class Export:
 
     @staticmethod
     def stats_mont_df_to_excel(name: str, dataframe: pd.DataFrame, path: str) -> None:
+        """
+        Uses the monthly dataframe to aggregate/pivot the data by:
+         - employee
+         - company
+         - trainer
+         - company total
+         - trainer total
+         and save every dataframe as a separate sheet
+
+        :param name: the name for the .excel file
+        :param dataframe: new_monthly_data_df
+        :param path: relative path where the file must be saved
+        :return: None
+        """
+
+        # use the manager for the .xlsx file building and saving
         with pd.ExcelWriter(f'{path}{name}.xlsx', engine='xlsxwriter') as ew:
             # add sheet for statistical monthly data by Employee
             month_stats_emp = dataframe[['nickname', 'company']] \
@@ -363,6 +401,7 @@ class Export:
                                      index=False,
                                      header=['EmployeeID', 'Company', 'trainings', 'Total'],
                                      freeze_panes=(1, 4))
+
             # add sheet for statistical monthly data by Company
             month_stats_comp = dataframe[['company', 'nickname', 'concat_emp_company']]
             month_stats_comp_pivot = pd.pivot_table(month_stats_comp,
@@ -378,6 +417,7 @@ class Export:
                                             index_label=['Company', 'EmployeeID'],
                                             header=['trainings'],
                                             freeze_panes=(1, 3))
+
             # add sheet for statistical monthly data by Trainer
             month_stats_trainer = dataframe[['trainer', 'nickname', 'concat_emp_company']]
             month_stats_trainer = pd.pivot_table(month_stats_trainer,
@@ -393,6 +433,7 @@ class Export:
                                          index_label=['Trainer', 'EmployeeID'],
                                          header=['trainings'],
                                          freeze_panes=(1, 3))
+
             # add sheet for statistical monthly data for Company's total
             month_stats_comp_total = dataframe[['company', 'concat_emp_company', 'bgn_per_hour']]
             month_stats_comp_total = pd.pivot_table(month_stats_comp_total,
@@ -408,6 +449,7 @@ class Export:
                                             index_label='Company',
                                             header=['BGN', 'Total trainings'],
                                             freeze_panes=(1, 3))
+
             # add sheet for statistical monthly data for Trainer's total
             month_stats_trainer__total = dataframe[['trainer', 'bgn_per_hour', 'is_valid']]
             month_stats_trainer__total = pd.pivot_table(month_stats_trainer__total,
@@ -426,6 +468,20 @@ class Export:
 
     @staticmethod
     def stats_full_df_to_excel(name: str, dataframe: pd.DataFrame, path: str) -> None:
+        """
+        Uses the full/annual dataframe to aggregate/pivot the data by:
+         - employee
+         - company
+         - trainer
+         - company total
+         - trainer total
+         and save every dataframe as a separate sheet
+
+        :param name: the name for the .excel file
+        :param dataframe: new_monthly_data_df
+        :param path: relative path where the file must be saved
+        :return:
+        """
         with pd.ExcelWriter(f'{path}{name}.xlsx', engine='xlsxwriter') as ew:
             # add sheet for statistical annual data by Company with percentage
             # filter_for_actual_contracts_y = (full_df['is_valid'] == 1)
@@ -441,8 +497,8 @@ class Export:
             annual_stats_general.to_excel(ew, sheet_name='company_general',
                                           index=False,
                                           header=['Company', 'Total trainings', '%Percentage'],
-                                          freeze_panes=(1, 3)
-                                          )
+                                          freeze_panes=(1, 3))
+
             # add sheet for statistical annual data by Company and Year
             annual_stats_by_year = dataframe[['company', 'year']]
             annual_stats_by_year = annual_stats_by_year.value_counts(['company', 'year']).unstack()
@@ -452,6 +508,7 @@ class Export:
                                           index=['company'],
                                           index_label=['Company'],
                                           freeze_panes=(1, 6))
+
             # add sheet for statistical annual data by Unique EmployeeIDs with percentage
             annual_stats_unique_emp0 = dataframe[['company', 'nickname']].value_counts().to_frame().reset_index()
             annual_stats_unique_emp1 = annual_stats_unique_emp0[['company']].value_counts().to_frame().reset_index()
@@ -467,6 +524,7 @@ class Export:
                                              index=False,
                                              header=['Company', 'Total trainings', '%Percentage'],
                                              freeze_panes=(1, 3))
+
             # add sheet for statistical annual data by Employee, by Year
             annual_stats_by_emp_by_year = dataframe[['company', 'nickname', 'year']]
             annual_stats_by_emp_by_year = annual_stats_by_emp_by_year.value_counts(['company', 'nickname', 'year']) \
@@ -477,6 +535,7 @@ class Export:
                                                  index=['company', 'nickname'],
                                                  index_label=['Company', 'EmployeeID'],
                                                  freeze_panes=(1, 7))
+
             # add sheet for statistical annual data by Company and Employees with only 1 training
             annual_stats_by_emp_with_one_training = dataframe[
                 (dataframe['returns_or_not'] == 'only one session')].reset_index()
@@ -492,6 +551,14 @@ class Export:
 
     @staticmethod
     def convert_docx_to_pdf(files_path) -> None:
+        """
+        Uses LibreOffice to convert the generated .docx reports to PDF
+        Serves to class BulkReport
+
+        :param files_path: relative path where the file must be saved
+        :return: None
+        """
+
         # path to the engine
         path_to_office = r"C:\Program Files\LibreOffice\program\soffice.exe"
         # verify the path using getcwd()
@@ -504,7 +571,6 @@ class Export:
 
                 # path with pdf files
                 output_folder = fr"PDFs"
-                # output_folder = fr"{output_folder_path}"
 
                 # changing directory to source
                 os.chdir(source_folder)
@@ -516,62 +582,103 @@ class Export:
 
 
 class ZipFiles:
-    __folder_path = "archives/"
+    """
+    Class used to provide functions related to the archive files
+
+        Attributes
+        ----------
+        No attributes
+
+        Methods
+        -------
+        zip_export_folder() -> str:
+            Collects filenames/file paths and add the files into a .zip archive file.
+
+    """
 
     @staticmethod
-    def zip_export_folder() -> str:
+    def zip_export_folder() -> None:
+        """
+        Collects filenames/file paths and add the files into a .zip archive file.
+
+        :return: None
+        """
+
         dt = datetime.now()
         dt_string = dt.strftime("%d-%m-%Y_%H-%M-%S")
         new_file = f"reports_and_invoices_{dt_string}.zip"
 
+        # use file browser for the path selection and validate choice/actions
         while True:
             tkinter.Tk().withdraw()  # prevents an empty tkinter window from appearing
             target_dir_path = asksaveasfile(filetypes=[("Zip archive file", ".zip")],
                                             defaultextension=".zip",
                                             initialfile=f"{new_file}",
                                             title='Save all data/reports as Zip file')
+
             if not target_dir_path:
                 print("Please select folder for the output .zip file!")
                 continue
+
+            logging.info(f"The user select the following path for saving the .zip: '{target_dir_path}'")
             save_as = target_dir_path.name
+
+            # get list of all files in 'exports' folder
             with zipfile.ZipFile(f'{save_as}', 'w') as f:
                 for root, dirs, files in os.walk("exports"):
                     for file in files:
                         f.write(os.path.join(root, file))
                     for directory in dirs:
                         f.write(os.path.join(root, directory))
+            logging.info(f"The .zip files with all of the reports was created and saved")
             break
-        return new_file
 
 
 class Clearing:
+    """
+    Class used to provide functions related to the file removing
+
+        Attributes
+        ----------
+        No attributes
+
+        Methods
+        -------
+        list_files(folder_relative_path) -> List[str]:
+            List files and folders/sub folders in given relative path
+
+        delete_files_from_export_subfolders():
+            Receives list with file paths and names and removes all non-directories
+    """
 
     @staticmethod
     def list_files(folder_relative_path) -> List[str]:
+        """
+        List files and folders/sub folders in given relative path
+
+        :param folder_relative_path:
+        :return: list with the file paths and names
+        """
+        logging.info(f"Removing of the files from '{folder_relative_path}' was initiated!")
         items_list = []
         for root, dirs, files in os.walk(folder_relative_path, topdown=False):
             for name in files:
                 items_list.append(os.path.join(root, name))
             for name in dirs:
                 items_list.append(os.path.join(root, name))
+        logging.info(f"Removing of the files from '{folder_relative_path}' completed!")
         return items_list
 
     @staticmethod
     def delete_files_from_export_subfolders():
+        """
+        Receives list with file paths and names and removes all non-directories
+        :return:
+        """
         clearing_list = Clearing.list_files("exports")
 
         for item in clearing_list:
             if os.path.isfile(item):
-                # print(item, "was removed")
                 os.remove(item)
 
 
-class Create:
-
-    @staticmethod
-    def create_folder(name: str, parent: str):
-        directory = name
-        parent_directory = parent + "/"
-        path = os.path.join(parent_directory, directory)
-        os.mkdir(path)
-        logging.info("Directory '% s' created" % directory)

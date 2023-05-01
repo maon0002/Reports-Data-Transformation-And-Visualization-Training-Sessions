@@ -24,3 +24,51 @@
 29-04-2023 18:32:38 INFO     Directory 'PDFs' created
 29-04-2023 18:38:14 INFO     Directory 'from_templates' created
 29-04-2023 18:38:16 INFO     Directory 'PDFs' created
+01-05-2023 18:00:01 INFO     General/initial report file imported successfully and limitations_df dataframe was created
+01-05-2023 18:00:04 INFO     Limitations file imported successfully and limitations_df dataframe was created
+01-05-2023 18:50:24 INFO     Removing of the files from 'exports' was initiated!
+01-05-2023 18:50:24 INFO     Removing of the files from 'exports' completed!
+01-05-2023 18:50:27 INFO     The user select the following path: 'C:/Users/LENOVO/Downloads/0.schedule2023-04-18.csv' for initial report importing
+01-05-2023 18:50:28 INFO     General/initial report file imported successfully and limitations_df dataframe was created
+01-05-2023 18:50:29 INFO     The user select the following path: 'C:/Users/LENOVO/Downloads/0.limitations.csv' for limitations importing
+01-05-2023 18:50:29 INFO     Limitations file imported successfully and limitations_df dataframe was created
+01-05-2023 18:51:09 INFO     Removing of the files from 'exports' was initiated!
+01-05-2023 18:51:09 INFO     Removing of the files from 'exports' completed!
+01-05-2023 18:51:12 INFO     The user select the following path: 'C:/Users/LENOVO/Downloads/0.schedule2023-04-18.csv' for initial report importing
+01-05-2023 18:51:12 INFO     General/initial report file imported successfully and limitations_df dataframe was created
+01-05-2023 18:51:13 INFO     The user select the following path: 'C:/Users/LENOVO/Downloads/0.limitations.csv' for limitations importing
+01-05-2023 18:51:13 INFO     Limitations file imported successfully and limitations_df dataframe was created
+01-05-2023 18:51:54 INFO     Removing of the files from 'exports' was initiated!
+01-05-2023 18:51:54 INFO     Removing of the files from 'exports' completed!
+01-05-2023 18:51:57 INFO     The user select the following path: 'C:/Users/LENOVO/Downloads/0.schedule2023-04-18.csv' for initial report importing
+01-05-2023 18:51:57 INFO     General/initial report file imported successfully and limitations_df dataframe was created
+01-05-2023 18:51:58 INFO     The user select the following path: 'C:/Users/LENOVO/Downloads/0.limitations.csv' for limitations importing
+01-05-2023 18:51:58 INFO     Limitations file imported successfully and limitations_df dataframe was created
+01-05-2023 18:52:06 INFO     Initiate exporting of the Raw_Full report
+01-05-2023 18:52:06 INFO     Exporting of the Raw_Full report was successfully done
+01-05-2023 18:52:06 INFO     Initiate exporting of the Raw_Mont report
+01-05-2023 18:52:06 INFO     Exporting of the Raw_Mont report was successfully done
+01-05-2023 18:52:06 INFO     Initiate exporting of the New_Full report
+01-05-2023 18:52:06 INFO     Exporting of the New_Full report was successfully done
+01-05-2023 18:52:06 INFO     Initiate exporting of the New_Mont report
+01-05-2023 18:52:06 INFO     Exporting of the New_Mont report was successfully done
+01-05-2023 18:52:06 INFO     Initiate exporting of the Companies report
+01-05-2023 18:52:11 INFO     Exporting of the Companies report was successfully done
+01-05-2023 18:52:11 INFO     Initiate exporting of the Companies_Out_Of_Scope report
+01-05-2023 18:52:11 INFO     Exporting of the Companies_Out_Of_Scope report was successfully done
+01-05-2023 18:52:11 INFO     Initiate exporting of the Trainers report
+01-05-2023 18:52:13 INFO     Exporting of the Trainers report was successfully done
+01-05-2023 18:52:13 INFO     Initiate exporting of the Generic report
+01-05-2023 18:52:17 INFO     Exporting of the Generic report was successfully done
+01-05-2023 18:52:17 INFO     Initiate exporting of the Stats_Mont report
+01-05-2023 18:52:17 INFO     Exporting of the Stats_Mont report was successfully done
+01-05-2023 18:52:17 INFO     Initiate exporting of the Stats_Full report
+01-05-2023 18:52:18 INFO     Exporting of the Stats_Full report was successfully done
+01-05-2023 18:52:18 INFO     Initiate exporting of the by_calendar report
+01-05-2023 18:52:22 INFO     Exporting of the by_calendar report was successfully done
+01-05-2023 18:52:22 INFO     Initiate exporting of the by_company report
+01-05-2023 18:52:26 INFO     Exporting of the by_company report was successfully done
+01-05-2023 18:52:26 INFO     Initiate exporting of the by_company_x report
+01-05-2023 18:52:29 INFO     Exporting of the by_company_x report was successfully done
+01-05-2023 18:52:31 INFO     The user select the following path for saving the .zip: '<_io.TextIOWrapper name='C:/Users/LENOVO/Downloads/reports_and_invoices_01-05-2023_18-52-29.zip' mode='w' encoding='cp1252'>'
+01-05-2023 18:52:31 INFO     The .zip files with all of the reports was created and saved

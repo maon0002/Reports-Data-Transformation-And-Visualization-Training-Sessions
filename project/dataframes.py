@@ -23,6 +23,10 @@ class BaseDataframe:
         unwanted_chars(df: pd.DataFrame) -> pd.DataFrame:
             Get rid of single quotes and apostrophes
 
+        def transliterate_bg_to_en(df: pd.DataFrame, column: str, new_column: str) -> pd.Series:
+            Uses a dictionary with the transliteration pairs {BG:EN} to
+            transliterate pd.Series / columns
+
         nickname(df: pd.DataFrame) -> pd.DataFrame:
             Validating and transforming the 'name' and 'email' related columns
             and creating an additional one for the purpose of
@@ -128,6 +132,39 @@ class BaseDataframe:
 
         df = df.replace("'|  |`", "", regex=True)
         return df
+
+    @staticmethod
+    def transliterate_bg_to_en(df: pd.DataFrame, column: str, new_column: str) -> pd.Series:
+        """
+        Uses a dictionary with the transliteration pairs {BG:EN} to
+        transliterate pd.Series / columns
+
+        :param df:
+        :param column:
+        :param new_column:
+        :return:
+        """
+
+        bg_en_dict = Collection.transliterate_dict()
+
+        # transliteration char by char
+        transliterated_string = ""
+        for i in range(len(df[column])):
+            string_value = df.loc[i, column].strip()
+            if string_value and not string_value.isascii():
+                for char in string_value:
+                    if char in bg_en_dict.keys():
+                        string_value = string_value.replace(
+                            char, bg_en_dict[char])
+                        transliterated_string = string_value
+                    else:
+                        transliterated_string = string_value
+
+                df.loc[i, new_column] = transliterated_string.upper()
+                transliterated_string = ""
+            else:
+                df.loc[i, new_column] = df.loc[i, column].upper()
+        return df[new_column]
 
     @staticmethod
     def nickname(df: pd.DataFrame) -> pd.DataFrame:

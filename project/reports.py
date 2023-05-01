@@ -116,9 +116,11 @@ class Report(BaseReport):
         """
         Find the needed dataframe and execute the right function for this class object
         """
+        logging.info(f"Initiate exporting of the {self.name} report")
         function = self.get_function_by_name()
         df_obj = self.get_dataframe_obj()
         function(self.name, df_obj, self.path)
+        logging.info(f"Exporting of the {self.name} report was successfully done")
 
 
 class BulkReport(BaseReport):
@@ -153,8 +155,10 @@ class BulkReport(BaseReport):
         """
         Find and execute the right function for this class object
         """
+        logging.info(f"Initiate exporting of the {self.name} report")
         function = self.get_function_by_name()
         function(self.path)
+        logging.info(f"Exporting of the {self.name} report was successfully done")
 
 
 class MultiReport(BaseReport):
@@ -184,8 +188,10 @@ class MultiReport(BaseReport):
         """
         Find and execute the right function for this class object
         """
+        logging.info(f"Initiate exporting of the {self.name} report")
         function = self.get_function_by_name()
         function(self.name, self.df_dict, self.path)
+        logging.info(f"Exporting of the {self.name} report was successfully done")
 
 
 # Remove all files in the 'exports' folder and sub-folders saved during previous runs
