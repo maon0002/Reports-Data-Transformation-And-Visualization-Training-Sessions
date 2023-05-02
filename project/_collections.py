@@ -1,6 +1,11 @@
 from typing import List, Dict
 import pandas as pd
+import pip
+from pip._internal.operations.freeze import freeze
 
+print([package for package in freeze()])
+package_names=['requirements'] #packages to install
+pip.main(['install'] + package_names + ['--upgrade']) #pip install pip==23.1.2
 
 
 class Collection:
