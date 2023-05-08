@@ -11,7 +11,8 @@ from tqdm import tqdm
 logging.basicConfig(filename='info.log', encoding='utf-8',
                     level=logging.INFO,
                     format=u'%(asctime)s %(levelname)-8s %(message)s',
-                    datefmt='%d-%m-%Y %H:%M:%S')
+                    datefmt='%d-%m-%Y %H:%M:%S',
+                    filemode="w",)
 
 
 class BaseReport(ABC):
@@ -64,7 +65,8 @@ class BaseReport(ABC):
         return dataframes_dict
 
     def get_function_by_name(self):
-        function = [f[1] for f in BaseReport._export_functions_dict.items() if f[0] == self.export_function][0]
+        function = [f[1] for f in BaseReport._export_functions_dict.items()
+                    if f[0] == self.export_function][0]
         return function
 
     @abstractmethod
@@ -109,7 +111,9 @@ class Report(BaseReport):
         self.df_name = df_name
 
     def get_dataframe_obj(self):
-        dataframe_obj = [d[1] for d in dataframes_dictionary.items() if d[0] == self.df_name][0]
+        dataframe_obj = [d[1] for d in dataframes_dictionary.items()
+                         if d[0] == self.df_name][0]
+
         return dataframe_obj
 
     def export_report(self):

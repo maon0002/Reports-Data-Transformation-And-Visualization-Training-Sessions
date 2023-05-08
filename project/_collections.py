@@ -1,11 +1,5 @@
 from typing import List, Dict
 import pandas as pd
-import pip
-from pip._internal.operations.freeze import freeze
-
-print([package for package in freeze()])
-package_names=['requirements'] #packages to install
-pip.main(['install'] + package_names + ['--upgrade']) #pip install pip==23.1.2
 
 
 class Collection:
@@ -57,6 +51,18 @@ class Collection:
             :return: list with trainer names
 
     """
+
+    # @property
+    # def report_expected_columns(self):
+    #     """
+    #     :return: the expected names and order of the imported Initial/General report
+    #     """
+    #     return ['Start Time', 'End Time', 'First Name', 'Last Name', 'Phone', 'Email', 'Type', 'Calendar',
+    #             'Appointment Price', 'Paid?', 'Amount Paid Online', 'Certificate Code', 'Notes',
+    #             'Date Scheduled', 'Label', 'Scheduled By',
+    #             'Име на компанията, в която работите | Name of the company you work for  ',
+    #             'Служебен имейл | Work email  ', 'Предпочитани платформи | Preferred platforms  ',
+    #             'Appointment ID']
 
     @staticmethod
     def report_expected_columns():
@@ -286,5 +292,3 @@ class Collection:
         :return: list with trainer names
         """
         return [trainer for trainer in monthly_data['trainer'].unique()]
-
-

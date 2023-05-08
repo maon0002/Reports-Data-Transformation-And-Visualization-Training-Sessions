@@ -146,7 +146,9 @@ class ReportFromTemplate:
         doc.save(f"exports/from_templates/by_company/Reports_by_company_{company}.docx")
 
     @staticmethod
-    def create_by_company_x_report_from_docx_template(company: str, df: pd.DataFrame, total_hours: float,
+    def create_by_company_x_report_from_docx_template(company: str,
+                                                      df: pd.DataFrame,
+                                                      total_hours: float,
                                                       start_date, end_date):
         """
         The function gets filtered and aggregated data from the

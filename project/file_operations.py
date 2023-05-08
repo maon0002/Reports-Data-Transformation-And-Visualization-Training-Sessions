@@ -527,22 +527,31 @@ class Export:
 
             # add sheet for statistical annual data by Employee, by Year
             annual_stats_by_emp_by_year = dataframe[['company', 'nickname', 'year']]
+
             annual_stats_by_emp_by_year = annual_stats_by_emp_by_year.value_counts(['company', 'nickname', 'year']) \
                 .unstack()
+
             annual_stats_by_emp_by_year['Total'] = annual_stats_by_emp_by_year.agg("sum", axis='columns')
+
             annual_stats_by_emp_by_year.loc[-1, 'Grand Total'] = annual_stats_by_year['Total'].sum()
+
             annual_stats_by_emp_by_year.to_excel(ew, sheet_name='by_emp_by_year',
                                                  index=['company', 'nickname'],
                                                  index_label=['Company', 'EmployeeID'],
                                                  freeze_panes=(1, 7))
 
             # add sheet for statistical annual data by Company and Employees with only 1 training
-            annual_stats_by_emp_with_one_training = dataframe[
-                (dataframe['returns_or_not'] == 'only one session')].reset_index()
+            annual_stats_by_emp_with_one_training = \
+                dataframe[(dataframe['returns_or_not'] == 'only one session')].reset_index()
+
             annual_stats_by_emp_with_one_training = pd.DataFrame(
                 annual_stats_by_emp_with_one_training[['company', 'nickname']].value_counts().to_frame())
-            annual_stats_by_emp_with_one_training.loc[-1, 'Grand Total'] = annual_stats_by_emp_with_one_training[
-                'count'].sum()
+
+            annual_stats_by_emp_with_one_training.columns = ['count']
+
+            annual_stats_by_emp_with_one_training.loc[-1, 'Grand Total'] = \
+                annual_stats_by_emp_with_one_training['count'].sum()
+
             annual_stats_by_emp_with_one_training.to_excel(ew, sheet_name='by_emp_with_one_training',
                                                            index=True,
                                                            index_label=['Company', 'EmployeeID'],
@@ -680,5 +689,3 @@ class Clearing:
         for item in clearing_list:
             if os.path.isfile(item):
                 os.remove(item)
-
-

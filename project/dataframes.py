@@ -274,7 +274,7 @@ class BaseDataframe:
         :return: the dataframe with added values in the flag column
         """
         df.loc[df['phone'].str.len() < 1, 'flags'] += "5,"
-        df.loc[df['phone'].str.contains('[^\d\+]', regex=True, na=False), 'flags'] += "6,"
+        df.loc[df['phone'].str.contains(r'[^\d\+]', regex=True, na=False), 'flags'] += "6,"
         df.loc[df['phone'].str.len().between(1, 8), 'flags'] += "6,"
         return df
 

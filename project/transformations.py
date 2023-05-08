@@ -24,8 +24,10 @@ class Transformation:
             to control the transformation of the dataframes
             (BaseDataframe functions + adding additional series/columns)
         """
+
     @staticmethod
-    def annual_to_monthly_report_df(report_dataframe: pd.DataFrame, datetime_format: str) -> pd.DataFrame:
+    def annual_to_monthly_report_df(report_dataframe: pd.DataFrame,
+                                    datetime_format: str) -> pd.DataFrame:
         """
         The function takes a piece from the data
         which is related only for the chosen from the user month
@@ -57,12 +59,16 @@ class Transformation:
             correct_input = re.search(r'(\d{4}-\d{2})', chosen_month.strip())
 
         # transform the period to an object for further filtering use
-        chosen_month_obj = datetime.strptime(chosen_month.strip() + "-01 00:00:00", datetime_format)
+        chosen_month_obj = datetime.strptime(chosen_month.strip() +
+                                             "-01 00:00:00",
+                                             datetime_format)
 
         chosen_month = pd.Series(chosen_month_obj).dt.to_period('M')
 
         # filter the data fo only one particular period (month from a year)
-        monthly_data_df = report_dataframe.loc[report_dataframe['start_time'].dt.to_period('M').isin(chosen_month)]. \
+        monthly_data_df = report_dataframe.loc[report_dataframe['start_time'].
+            dt.to_period('M').
+            isin(chosen_month)]. \
             reset_index(drop=True)
         return monthly_data_df
 
@@ -71,7 +77,8 @@ class Transformation:
              limitations_dataframe: pd.DataFrame
              ) -> dict:
         """
-        Uses the original .csv imported reports (initial report and the limitations files)
+        Uses the original .csv imported reports
+        (initial report and the limitations files)
         to control the transformation of the dataframes
         (BaseDataframe functions + adding additional series/columns)
 
@@ -139,9 +146,12 @@ class Transformation:
 
         # define the raw dataframes
         full_raw_report_df = df
+
         full_raw_report_df.attrs['name'] = "raw_full"
-        monthly_raw_report_df = Transformation.annual_to_monthly_report_df(full_raw_report_df,
-                                                                           Collection.datetime_final_format())
+
+        monthly_raw_report_df = Transformation.annual_to_monthly_report_df(
+            full_raw_report_df, Collection.datetime_final_format())
+
         monthly_raw_report_df.attrs['name'] = "raw_mont"
 
         # separate and select only needed columns for new pd sets
@@ -165,6 +175,6 @@ class Transformation:
             "flags_data_df": flags_data_df,
             "full_raw_report_df": full_raw_report_df,
             "monthly_raw_report_df": monthly_raw_report_df
-                    }
+        }
 
         return dfs_dict
