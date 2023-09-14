@@ -12,7 +12,7 @@ logging.basicConfig(filename='info.log', encoding='utf-8',
                     level=logging.INFO,
                     format=u'%(asctime)s %(levelname)-8s %(message)s',
                     datefmt='%d-%m-%Y %H:%M:%S',
-                    filemode="w",)
+                    filemode="w", )
 
 
 class BaseReport(ABC):
@@ -197,32 +197,33 @@ class MultiReport(BaseReport):
         function(self.name, self.df_dict, self.path)
         logging.info(f"Exporting of the {self.name} report was successfully done")
 
+if __name__ =='__main__':
 
-# Remove all files in the 'exports' folder and sub-folders saved during previous runs
-Clearing.delete_files_from_export_subfolders()
+    # Remove all files in the 'exports' folder and sub-folders saved during previous runs
+    Clearing.delete_files_from_export_subfolders()
 
-# Get a dictionary with the based on the imported initial report dataframes
-dataframes_dictionary = BaseReport.build_report_base()
+    # Get a dictionary with the based on the imported initial report dataframes
+    dataframes_dictionary = BaseReport.build_report_base()
 
-# Create all report instances
-raw_full = Report("Raw_Full", "exports/for_reference/", "df_to_csv", "full_raw_report_df")
-raw_mont = Report("Raw_Mont", "exports/for_reference/", "df_to_csv", "monthly_raw_report_df")
-new_full = Report("New_Full", "exports/for_reference/", "df_to_csv", "new_full_data_df")
-new_mont = Report("New_Mont", "exports/for_reference/", "df_to_csv", "new_monthly_data_df")
-companies = Report("Companies", "exports/", "companies_df_to_excel", "new_monthly_data_df")
-companies_out_of_scope = Report("Companies_Out_Of_Scope", "exports/", "companies_df_to_excel", "new_monthly_data_df")
-trainers = Report("Trainers", "exports/", "trainers_df_to_excel", "new_monthly_data_df")
-generic = MultiReport("Generic", "exports/for_reference/", "generic_df_to_excel", dataframes_dictionary)
-stats_mont = Report("Stats_Mont", "exports/for_reference/", "stats_mont_df_to_excel", "new_monthly_data_df")
-stats_full = Report("Stats_Full", "exports/for_reference/", "stats_full_df_to_excel", "new_full_data_df")
-by_calendar = BulkReport("by_calendar", "exports/from_templates/by_calendar", "convert_docx_to_pdf")
-by_company = BulkReport("by_company", "exports/from_templates/by_company", "convert_docx_to_pdf")
-by_company_x = BulkReport("by_company_x", "exports/from_templates/by_company_x", "convert_docx_to_pdf")
+    # Create all report instances
+    raw_full = Report("Raw_Full", "exports/for_reference/", "df_to_csv", "full_raw_report_df")
+    raw_mont = Report("Raw_Mont", "exports/for_reference/", "df_to_csv", "monthly_raw_report_df")
+    new_full = Report("New_Full", "exports/for_reference/", "df_to_csv", "new_full_data_df")
+    new_mont = Report("New_Mont", "exports/for_reference/", "df_to_csv", "new_monthly_data_df")
+    companies = Report("Companies", "exports/", "companies_df_to_excel", "new_monthly_data_df")
+    companies_out_of_scope = Report("Companies_Out_Of_Scope", "exports/", "companies_df_to_excel", "new_monthly_data_df")
+    trainers = Report("Trainers", "exports/", "trainers_df_to_excel", "new_monthly_data_df")
+    generic = MultiReport("Generic", "exports/for_reference/", "generic_df_to_excel", dataframes_dictionary)
+    stats_mont = Report("Stats_Mont", "exports/for_reference/", "stats_mont_df_to_excel", "new_monthly_data_df")
+    stats_full = Report("Stats_Full", "exports/for_reference/", "stats_full_df_to_excel", "new_full_data_df")
+    by_calendar = BulkReport("by_calendar", "exports/from_templates/by_calendar", "convert_docx_to_pdf")
+    by_company = BulkReport("by_company", "exports/from_templates/by_company", "convert_docx_to_pdf")
+    by_company_x = BulkReport("by_company_x", "exports/from_templates/by_company_x", "convert_docx_to_pdf")
 
-# Get a list of all report instances and initiate progress tracking
-report_instances = [r for r in gc.get_objects() if isinstance(r, BaseReport)]
-for i in tqdm(range(len(report_instances))):
-    report_instances[i].export_report()
+    # Get a list of all report instances and initiate progress tracking
+    report_instances = [r for r in gc.get_objects() if isinstance(r, BaseReport)]
+    for i in tqdm(range(len(report_instances))):
+        report_instances[i].export_report()
 
-# Zip all files and folders in 'exports' folder
-ZipFiles.zip_export_folder()
+    # Zip all files and folders in 'exports' folder
+    ZipFiles.zip_export_folder()
